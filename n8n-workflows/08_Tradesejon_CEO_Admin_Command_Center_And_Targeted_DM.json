@@ -1,0 +1,104 @@
+{
+  "id": "tradesejon-wf-08",
+  "name": "08_Tradesejon_CEO_Admin_Command_Center_And_Targeted_DM",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-04",
+      "name": "CEO Command Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-ceo-command",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "auth-04",
+      "name": "CEO Strict Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+      }
+    },
+    {
+      "id": "dm-exec-08",
+      "name": "Execute Verified Discord DM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        490,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\nconst targetId = String(b.discord_user_id || '');\nconst msg = String(b.message || '');\nconst token = $env.DISCORD_BOT_TOKEN || '';\nif (!targetId || !msg || !token) return [{ json: { ok: false, httpStatus: 400, error: 'Missing discord_user_id, message, or DISCORD_BOT_TOKEN' } }];\nconst ch = await fetch('https://discord.com/api/v10/users/@me/channels', {\n  method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ recipient_id: targetId })\n}).then(r => r.json());\nif (!ch.id) return [{ json: { ok: false, delivered: false, httpStatus: 502, error: 'Failed to open Discord DM channel' } }];\nconst sent = await fetch(`https://discord.com/api/v10/channels/${ch.id}/messages`, {\n  method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ content: msg })\n}).then(r => r.json());\nreturn [{ json: { ok: Boolean(sent.id), delivered: Boolean(sent.id), messageId: sent.id || null } }];"
+      }
+    },
+    {
+      "id": "resp-04",
+      "name": "Respond CEO",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        620,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "CEO Command Webhook": {
+      "main": [
+        [
+          {
+            "node": "CEO Strict Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CEO Strict Auth": {
+      "main": [
+        [
+          {
+            "node": "Execute Verified Discord DM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Verified Discord DM": {
+      "main": [
+        [
+          {
+            "node": "Respond CEO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

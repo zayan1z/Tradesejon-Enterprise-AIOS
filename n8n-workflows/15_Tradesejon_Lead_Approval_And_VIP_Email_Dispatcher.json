@@ -1,0 +1,176 @@
+{
+  "id": "tradesejon-wf-15",
+  "name": "15_Tradesejon_Lead_Approval_And_VIP_Email_Dispatcher",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-11",
+      "name": "VIP Email Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-vip-email",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "auth-11",
+      "name": "Zero-Trust Header Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+      }
+    },
+    {
+      "id": "if-11",
+      "name": "If Authorized",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        560,
+        260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-11-cond",
+              "leftValue": "={{ $json.authorized }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "send-11",
+      "name": "Send VIP Email via Resend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.RESEND_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM_EMAIL || 'onboarding@resend.dev', to: [$json.email], subject: $json.subject || 'Tradesejon Access', html: $json.html || '<p>Welcome to Tradesejon.</p>' }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "resp-11",
+      "name": "Respond Dispatched",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.authorized === false ? $json : { ok: true, id: $json.id || null }) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "VIP Email Webhook": {
+      "main": [
+        [
+          {
+            "node": "Zero-Trust Header Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zero-Trust Header Auth": {
+      "main": [
+        [
+          {
+            "node": "If Authorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Authorized": {
+      "main": [
+        [
+          {
+            "node": "Send VIP Email via Resend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Dispatched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send VIP Email via Resend": {
+      "main": [
+        [
+          {
+            "node": "Respond Dispatched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

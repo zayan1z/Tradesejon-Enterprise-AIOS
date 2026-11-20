@@ -1,0 +1,104 @@
+{
+  "id": "tradesejon-wf-09",
+  "name": "09_Tradesejon_Offline_Workshop_Launch_Form_And_Seats",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-05",
+      "name": "Offline Workshop Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-offline-workshop",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "auth-05",
+      "name": "Operator Auth Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+      }
+    },
+    {
+      "id": "ws-exec-09",
+      "name": "Reserve Seat in MongoDB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        490,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\nif (!$env.MONGODB_URI) return [{ json: { ok: false, error: 'MONGODB_URI required for workshop seat reservation' } }];\nconst { MongoClient } = require('mongodb');\nconst client = new MongoClient($env.MONGODB_URI);\nawait client.connect();\nconst db = client.db($env.MONGODB_DB || 'tradesejon_prod');\nconst maxSeats = Number($env.WORKSHOP_MAX_SEATS || 20);\nconst count = await db.collection('workshop_seats').countDocuments({ status: 'confirmed' });\nif (count >= maxSeats) {\n  await client.close();\n  return [{ json: { ok: false, seats_remaining: 0, error: `Workshop reached capacity (${maxSeats} seats)` } }];\n}\nawait db.collection('workshop_seats').insertOne({\n  full_name: String(b.full_name || 'Applicant'),\n  email: String(b.email || '').toLowerCase(),\n  phone: String(b.phone || ''),\n  is_member: Boolean(b.is_member),\n  status: 'confirmed',\n  createdAt: new Date()\n});\nawait client.close();\nreturn [{ json: { ok: true, reserved: true, seats_remaining: maxSeats - count - 1 } }];"
+      }
+    },
+    {
+      "id": "resp-05",
+      "name": "Respond Workshop",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        620,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Offline Workshop Webhook": {
+      "main": [
+        [
+          {
+            "node": "Operator Auth Guard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Operator Auth Guard": {
+      "main": [
+        [
+          {
+            "node": "Reserve Seat in MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reserve Seat in MongoDB": {
+      "main": [
+        [
+          {
+            "node": "Respond Workshop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

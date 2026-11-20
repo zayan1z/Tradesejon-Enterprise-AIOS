@@ -1,0 +1,58 @@
+{
+  "id": "tradesejon-wf-18-crm-pipeline",
+  "name": "18_Tradesejon_CRM_Full_Pipeline_And_Lead_Scoring",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-crm",
+        "responseMode": "lastNode"
+      },
+      "id": "crm-wh",
+      "name": "CRM API Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst action = String(b.action || 'get_stats');\nif ($env.MONGODB_URI && (action === 'get_stats' || action === 'list_leads')) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const client = new MongoClient($env.MONGODB_URI);\n    await client.connect();\n    const db = client.db($env.MONGODB_DB || 'tradesejon_prod');\n    if (action === 'list_leads') {\n      const leads = await db.collection('leads').find({}).sort({ createdAt: -1 }).limit(50).toArray();\n      await client.close();\n      return [{ json: { ok: true, count: leads.length, leads } }];\n    }\n    const totalLeads = await db.collection('leads').countDocuments();\n    const activeMembers = await db.collection('members').countDocuments({ active: true });\n    await client.close();\n    return [{ json: { ok: true, total_leads: totalLeads, active_members: activeMembers } }];\n  } catch (e) {\n    return [{ json: { ok: false, error: 'Database query failed: ' + e.message } }];\n  }\n}\nconst capital = Number(b.capital || 0);\nconst score = Math.min(40 + (capital >= 1000 ? 35 : (capital >= 250 ? 20 : 0)) + (['advanced','intermediate'].includes(String(b.trading_level).toLowerCase()) ? 25 : 0), 100);\nreturn [{ json: { ok: true, action, lead_score: score, tier: score >= 75 ? 'VIP_HOT_LEAD' : 'QUALIFIED_PROSPECT' } }];"
+      },
+      "id": "crm-logic",
+      "name": "MongoDB CRM Engine & Lead Scoring",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "CRM API Webhook": {
+      "main": [
+        [
+          {
+            "node": "MongoDB CRM Engine & Lead Scoring",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "crm"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "id": "tradesejon-wf-12",
+  "name": "12_Tradesejon_Whop_Payment_Reconciler_Cron",
+  "active": true,
+  "nodes": [
+    {
+      "id": "cron-08",
+      "name": "Every 2 Minutes Reconcile",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "http-08",
+      "name": "Fetch Recent Paid Whop Payments",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        260
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.whop.com/api/v1/payments?status=paid&limit=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHOP_API_KEY }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 2 Minutes Reconcile": {
+      "main": [
+        [
+          {
+            "node": "Fetch Recent Paid Whop Payments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

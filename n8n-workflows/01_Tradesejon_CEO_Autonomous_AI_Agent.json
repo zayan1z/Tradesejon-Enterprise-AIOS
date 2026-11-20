@@ -1,0 +1,59 @@
+{
+  "id": "tradesejon-wf-01-ceo-agent",
+  "name": "01_Tradesejon_CEO_Autonomous_AI_Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-ceo",
+        "responseMode": "lastNode"
+      },
+      "id": "ceo-wh",
+      "name": "CEO Webhook (Telegram & Web)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $input.first().json || {};\nconst headers = Object.fromEntries(Object.entries(req.headers || {}).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst body = req.body || req || {};\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nconst token = String(headers['x-tradesejon-secret'] || headers['x-ceo-token'] || '');\nconst expectedSecret = String($env.TRADESAJON_BRIDGE_SECRET || '');\nconst tgMsg = body.message || (body.callback_query ? body.callback_query.message : null);\nconst tgFromId = String(body.message?.from?.id || body.callback_query?.from?.id || '');\nconst tgChatId = String(tgMsg?.chat?.id || body.chat_id || '');\nconst authCeoIds = String($env.CEO_USER_IDS || '').split(/[,;\\s]+/).map(s => s.trim()).filter(Boolean);\n\nconst isAuthSecret = expectedSecret && token === expectedSecret;\nconst isAuthTg = tgFromId && authCeoIds.includes(tgFromId);\nif ((expectedSecret || authCeoIds.length > 0) && !isAuthSecret && !isAuthTg) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'Unauthorized executive access.' } }];\n}\n\nlet text = String(body.callback_query?.data || body.message?.text || body.command || body.query || '').trim();\nconst voiceFileId = body.message?.voice?.file_id;\nconst tgCeoToken = $env.TELEGRAM_CEO_BOT_TOKEN || '';\nconst groqKey = $env.GROQ_API_KEY || '';\n\nif (!text && voiceFileId && tgCeoToken && groqKey) {\n  try {\n    const gf = await fetch(`https://api.telegram.org/bot${tgCeoToken}/getFile?file_id=${voiceFileId}`).then(r => r.json());\n    if (gf.ok && gf.result?.file_path) {\n      const audioRes = await fetch(`https://api.telegram.org/file/bot${tgCeoToken}/${gf.result.file_path}`);\n      const blob = await audioRes.blob();\n      const fd = new FormData();\n      fd.append('file', blob, 'voice.ogg');\n      fd.append('model', 'whisper-large-v3');\n      fd.append('language', 'ar');\n      const stt = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {\n        method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}` }, body: fd\n      }).then(r => r.json());\n      if (stt.text) text = stt.text.trim();\n    }\n  } catch (e) {}\n}\n\nasync function replyTelegram(msgText) {\n  if (!tgChatId || !tgCeoToken) return;\n  await fetch(`https://api.telegram.org/bot${tgCeoToken}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: tgChatId, text: msgText, parse_mode: 'HTML' })\n  }).catch(() => null);\n}\n\nif (!text || text === '/start' || text === '/menu') {\n  const welcome = `👑 <b>Executive Command Center — ${brand} AIOS</b>\\n\\nSend any executive command in English or Egyptian Arabic:\\n• <code>/kpis</code> — Live CRM Metrics\\n• <i>What is Gold and Bitcoin price?</i>\\n• <i>Send to user@domain on discord telling him session is 9:30 PM</i>`;\n  await replyTelegram(welcome);\n  return [{ json: { ok: true, reply: welcome } }];\n}\n\nconst BRAND = $env.BRAND_NAME || \"Tradesejon\";\nconst MENTORS = $env.MENTORS_LIST || \"Senior Lead Strategist, Mentor Alpha, Mentor Beta, Mentor Gamma, Mentor Delta\";\nconst PLATFORMS = $env.SUPPORTED_PLATFORMS || \"Webull, Interactive Brokers (IBKR), TradingView\";\nconst FAQS = [\n  { q: \"مبتدئ في التداول / الفيديوهات\", a: `في ${BRAND} بنبدأ معاك من الصفر بخطة تدريبية منظمة وتطبيق عملي لايف عشان تتقن استراتيجية الـ Hyper-Scalping خطوة بخطوة.` },\n  { q: \"ايه المتطلبات عشان ابدأ؟\", a: \"لابتوب أو كمبيوتر، إنترنت مستقر، والتفرغ لحضور الجلسات اللايف المباشرة.\" },\n  { q: \"رأس المال المطلوب للبدء؟\", a: \"تقدر تبدأ بمرونة من $100 إلى $500 مع إدارة صارمة لرأس المال (WIN BIG, win small, lose small).\" },\n  { q: \"منصات وبرامج التداول المعتمدة؟\", a: `ندعم رسمياً منصات: ${PLATFORMS}.` },\n  { q: \"أوقات الجلسات اليومية المباشرة؟\", a: $env.LIVE_SESSION_SCHEDULE || \"يومياً من الإثنين للجمعة الساعة 9:30 مساءً عبر Discord VIP و Zoom.\" },\n  { q: \"أسعار ورشة التداول الأوفلاين؟\", a: `${$env.WORKSHOP_MEMBER_PRICE || '4,000'} جنيه ($74.39) للأعضاء، و ${$env.WORKSHOP_NONMEMBER_PRICE || '6,000'} جنيه ($111.59) لغير المشتركين.` },\n  { q: \"اشتراك مجتمع وسكانر الديسكورد؟\", a: `$${$env.VIP_MONTHLY_USD || '45'} شهرياً عبر Whop شاملة قنوات الـ VIP وسكانر الصفقات اللحظي.` },\n  { q: \"جلسة المتابعة الخاصة 4 ساعات؟\", a: `جلسة Online 1-on-1 لمدة 4 ساعات بقيمة $${$env.PRIVATE_SESSION_USD || '100'} شاملة مراجعة المحفظة والتطبيق المباشر.` },\n  { q: \"من هم الموجهين والمدربين؟\", a: `فريق التوجيه المعتمد في ${BRAND}: ${MENTORS}.` },\n  { q: \"طريقة وأسلوب التداول؟\", a: \"استراتيجية الـ Hyper-Scalping بمبدأ WIN BIG, win small, lose small.\" },\n  { q: \"هل يوجد توصيات شراء وبيع مباشرة؟\", a: \"بنوفرلك تحليلات لايف ومناطق دخول احترافية وسكانر لحظي مع تدريبك على القرار المستقل.\" },\n  { q: \"كيفية تجديد الاشتراك أو الترقية؟\", a: \"عبر بوابة الدفع الرسمية Whop بشكل تلقائي بالكامل وبمرونة الإلغاء بأي وقت.\" },\n  { q: \"هل الديسكورد متصل بالتيليجرام؟\", a: `نعم، منظومة ${BRAND} Omnichannel تربط الديسكورد والتيليجرام بشكل لحظي متزامن.` },\n  { q: \"ماذا أفعل لو واجهت مشكلة في الدفع؟\", a: \"تواصل مع بوت الدعم الفني أو افتح تذكرة في روم #pr-desk في الديسكورد.\" },\n  { q: \"هل متوفر شهادة بعد الورشة؟\", a: `نعم، يحصل الخريج على شهادة إتمام البرنامج التدريبي المعتمد من ${BRAND}.` },\n  { q: \"هل التداول مناسب للموظفين؟\", a: \"نعم، جلساتنا المسائية الساعة 9:30 مساءً بتوقيت القاهرة تناسب جدول العمل اليومي.\" },\n  { q: \"كيف أحصل على رابط الجلسة المباشرة؟\", a: \"يرسل الرابط المشفر تلقائياً عبر البوت قبل بدء الجلسة بـ 15 دقيقة.\" }\n];\nfor (const f of FAQS) {\n  if (text.includes(f.q) || f.q.split(' ').filter(w => w.length > 3).filter(w => text.includes(w)).length >= 2) {\n    const r = `💡 <b>${brand} Official Knowledge Base:</b>\\n\\n${f.a}`;\n    await replyTelegram(r);\n    return [{ json: { ok: true, matched_faq: true, reply: r } }];\n  }\n}\n\nconst isSend = /(?:eb3at|ab3at|send|deliver|ابعت|ارسل|وصل)/i.test(text);\nconst wantsDiscord = /(?:discord|ديسكورد|3la\\s*discord)/i.test(text);\nif (isSend && wantsDiscord) {\n  const discordToken = $env.DISCORD_BOT_TOKEN || '';\n  if (!discordToken) {\n    const errReply = \"⚠️ Discord delivery blocked: DISCORD_BOT_TOKEN not configured. Unverified confirmation suppressed.\";\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  let discordUserId = (text.match(/\\b\\d{17,19}\\b/) || [])[0] || '';\n  const emailMatch = (text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/) || [])[0] || '';\n  if (!discordUserId && emailMatch && $env.MONGODB_URI) {\n    try {\n      const { MongoClient } = require('mongodb');\n      const c = new MongoClient($env.MONGODB_URI);\n      await c.connect();\n      const doc = await c.db($env.MONGODB_DB || 'tradesejon_prod').collection('members').findOne({ email: emailMatch.toLowerCase() });\n      discordUserId = doc?.discord_user_id || '';\n      await c.close();\n    } catch (e) {}\n  }\n  if (!discordUserId) {\n    const errReply = `⚠️ Discord User ID not found for target (${emailMatch || 'unspecified'}). Confirmation blocked.`;\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  const msgMatch = text.match(/(?:2ollo|2olo|قوله|بلغه|en|inn|that|saying)\\s+(.+)$/i);\n  const msgBody = msgMatch ? msgMatch[1].trim() : text;\n  const dmCh = await fetch('https://discord.com/api/v10/users/@me/channels', {\n    method: 'POST', headers: { 'Authorization': `Bot ${discordToken}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ recipient_id: discordUserId })\n  }).then(r => r.json());\n  if (!dmCh.id) {\n    const errReply = `⚠️ Discord DM channel rejected: ${dmCh.message || 'Forbidden'}. Confirmation blocked.`;\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  const sent = await fetch(`https://discord.com/api/v10/channels/${dmCh.id}/messages`, {\n    method: 'POST', headers: { 'Authorization': `Bot ${discordToken}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ content: msgBody })\n  }).then(r => r.json());\n  if (!sent.id) {\n    const errReply = `⚠️ Discord message delivery failed: ${sent.message || 'Unknown error'}. Confirmation blocked.`;\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  const okReply = `✅ Verified 100% Delivered via Discord!\\n🆔 User: <code>${discordUserId}</code>\\n📌 Message ID: <code>${sent.id}</code>`;\n  await replyTelegram(okReply);\n  return [{ json: { ok: true, delivered: true, messageId: sent.id, reply: okReply } }];\n}\n\nif (/(?:سعر|كام|gold|btc|الذهب|بيتكوين|اسعار|price)/i.test(text)) {\n  let btc = 'Unavailable', gold = 'Unavailable';\n  try {\n    const bRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT').then(r => r.json());\n    if (bRes.price) btc = '$' + Number(bRes.price).toLocaleString('en-US', { maximumFractionDigits: 2 });\n  } catch (e) {}\n  try {\n    const gRes = await fetch('https://data-asg.goldprice.org/dbXRates/USD').then(r => r.json());\n    if (gRes.items?.[0]?.xauPrice) gold = '$' + Number(gRes.items[0].xauPrice).toLocaleString('en-US', { maximumFractionDigits: 2 });\n  } catch (e) {}\n  const mktReply = `📊 <b>Live Market Prices (${brand}):</b>\\n• 🪙 Gold (XAU/USD): ${gold}\\n• ₿ Bitcoin (BTC/USD): ${btc}`;\n  await replyTelegram(mktReply);\n  return [{ json: { ok: true, gold, btc, reply: mktReply } }];\n}\n\nlet finalReply = `Command received by ${brand} AIOS. Configure GROQ_API_KEY in .env to enable advanced generative execution.`;\nif (groqKey) {\n  const llm = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      temperature: 0.2,\n      messages: [\n        { role: 'system', content: `You are ${brand} CEO Autonomous AI Agent. Respond in executive Egyptian Arabic if input is Arabic/Franco, otherwise English. Platforms: ${PLATFORMS}. Mentors: ${MENTORS}. Never fabricate delivery confirmations or statistics.` },\n        { role: 'user', content: text }\n      ]\n    })\n  }).then(r => r.json()).catch(() => ({}));\n  if (llm.choices?.[0]?.message?.content) finalReply = llm.choices[0].message.content;\n}\n\nawait replyTelegram(finalReply);\nreturn [{ json: { ok: true, reply: finalReply } }];"
+      },
+      "id": "ceo-brain",
+      "name": "Autonomous Executive AI & Dispatch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "CEO Webhook (Telegram & Web)": {
+      "main": [
+        [
+          {
+            "node": "Autonomous Executive AI & Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "ceo",
+    "white-label"
+  ]
+}

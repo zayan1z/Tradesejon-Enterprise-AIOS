@@ -1,0 +1,59 @@
+{
+  "id": "tradesejon-wf-19-aios-voice",
+  "name": "19_Tradesejon_AIOS_Web_Chat_And_ElevenLabs_Voice",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-aios-chat",
+        "responseMode": "lastNode"
+      },
+      "id": "aios-wh",
+      "name": "AIOS Web Chat Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst msg = String(b.message || b.query || '').trim();\nconst groqKey = $env.GROQ_API_KEY || '';\nconst elevenKey = $env.ELEVENLABS_API_KEY || '';\nconst voiceId = $env.ELEVENLABS_VOICE_ID || 'pFZP5JQG7iQjIQuC4Bku';\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nlet reply = `${brand} AIOS processed: \"${msg}\"`;\nif (groqKey && msg) {\n  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: `You are ${brand} AIOS Command Center Assistant. Answer helpfully and concisely without fabricating actions or data.` },\n        { role: 'user', content: msg }\n      ]\n    })\n  }).then(res => res.json()).catch(() => ({}));\n  if (r.choices?.[0]?.message?.content) reply = r.choices[0].message.content;\n}\n\nlet audioBase64 = null;\nif ((b.voice || b.returnVoice) && elevenKey) {\n  try {\n    const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {\n      method: 'POST', headers: { 'xi-api-key': elevenKey, 'Content-Type': 'application/json' },\n      body: JSON.stringify({ text: reply.slice(0, 400), model_id: 'eleven_multilingual_v2' })\n    });\n    if (ttsRes.ok) audioBase64 = Buffer.from(await ttsRes.arrayBuffer()).toString('base64');\n  } catch (e) {}\n}\n\nreturn [{ json: { ok: true, reply, voice_enabled: Boolean(audioBase64), audioBase64 } }];"
+      },
+      "id": "aios-proc",
+      "name": "AIOS Chat & ElevenLabs Voice",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "AIOS Web Chat Webhook": {
+      "main": [
+        [
+          {
+            "node": "AIOS Chat & ElevenLabs Voice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "aios",
+    "voice"
+  ]
+}

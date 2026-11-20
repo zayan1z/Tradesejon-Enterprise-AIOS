@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: tradesejon_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: tradesejon_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  n8n:
+    build:
+      context: .
+      dockerfile: docker/n8n.Dockerfile
+    container_name: tradesejon_n8n_engine
+    restart: always
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    volumes:
+      - n8n_storage:/home/node/.n8n
+      - ./n8n-workflows:/home/node/tradesejon_workflows:ro
+    depends_on:
+      - mongodb
+      - redis
+
+  aios_dashboard:
+    build:
+      context: .
+      dockerfile: docker/aios.Dockerfile
+    container_name: tradesejon_aios_cloud
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      - N8N_BASE_URL=http://n8n:5678
+    depends_on:
+      - mongodb
+      - n8n
+
+  discord_tri_bot:
+    build:
+      context: ./discord-bots
+    container_name: tradesejon_discord_bots
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - N8N_BASE_URL=http://n8n:5678
+      - AIOS_BASE_URL=http://aios_dashboard:3000
+      - DISCORD_BRIDGE_HOST=0.0.0.0
+    depends_on:
+      - n8n
+      - mongodb
+      - aios_dashboard
+
+volumes:
+  mongo_data:
+  redis_data:
+  n8n_storage:

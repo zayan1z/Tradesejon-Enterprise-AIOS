@@ -1,0 +1,128 @@
+{
+  "id": "tradesejon-wf-05",
+  "name": "05_Tradesejon_Lead_Intake_Validation_And_Whop_OTP_Gate",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-01",
+      "name": "Intake Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "auth-01",
+      "name": "Zero-Trust Header Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+      }
+    },
+    {
+      "id": "val-01",
+      "name": "Strict Mail & Phone Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\n\nconst INVALID_DOMAINS = new Set([\n  'gmai.com','gmial.com','gamil.com','gmail.con','gmail.cmo','gmail.comm','gmail.co','gmail.cm','gmail.om',\n  'yaho.com','yahooo.com','yahoo.con','yahoo.comm','hotmial.com','hotmail.con','hotmail.comm',\n  'outlok.com','outlook.con','outlook.comm','icloud.con','icloud.comm'\n]);\nconst INVALID_TLDS = new Set(['comm','con','cmo','cor','vom','xom','cm','om']);\nconst EMAIL_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9])?@[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9](?:\\.[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])*\\.[A-Za-z]{2,63}$/;\n\nfunction forceFormatEmail(raw) {\n  const cleaned = String(raw || '').replace(/^[\\s\\u200b-\\u200f\\u202a-\\u202e\\ufeff]+|[\\s\\u200b-\\u200f\\u202a-\\u202e\\ufeff]+$/g, '').toLowerCase();\n  if (!cleaned || (cleaned.match(/@/g) || []).length !== 1 || cleaned.includes('..') || /\\s/.test(cleaned) || !EMAIL_RE.test(cleaned)) return '';\n  const domain = cleaned.split('@')[1];\n  const tld = domain.split('.').pop();\n  if (INVALID_DOMAINS.has(domain) || INVALID_TLDS.has(tld)) return '';\n  return cleaned;\n}\n\nconst email = forceFormatEmail(b.email || '');\nconst phoneRaw = String(b.phone || '').replace(/[\\s\\-()]/g, '');\nconst phoneOk = /^(?:\\+?20|0)?1[0125]\\d{8}$/.test(phoneRaw) || /^\\+?[1-9]\\d{7,14}$/.test(phoneRaw);\nconst dummy = new Set(['12345678','123456789','1234567890','0123456789','987654321']);\nconst digits = phoneRaw.replace(/\\D/g, '');\nconst plausiblePhone = phoneOk && digits.length >= 8 && new Set(digits.slice(-8).split('')).size > 1 && !dummy.has(digits);\n\nif (!email || !plausiblePhone) {\n  return [{ json: { ok: false, valid: false, httpStatus: 400, error: !email ? 'invalid_email' : 'invalid_phone' } }];\n}\nconst phoneE164 = digits.startsWith('01') ? '+20' + digits.slice(1) : (digits.startsWith('1') && digits.length === 10 ? '+20' + digits : '+' + digits);\nconst level = ['entry', 'intermediate', 'advanced'].includes(String(b.trading_level || '').toLowerCase()) ? String(b.trading_level).toLowerCase() : 'entry';\nconst country = String(b.country || 'مصر').trim();\n\nreturn [{\n  json: {\n    ok: true,\n    valid: true,\n    discord_user_id: String(b.discord_user_id || ''),\n    discord_username: String(b.discord_username || ''),\n    full_name: String(b.full_name || email.split('@')[0]),\n    email,\n    phone_e164: phoneE164,\n    country,\n    trading_level: level,\n    watched_videos: Boolean(b.watched_videos),\n    free_otp_url: 'https://whop.com/checkout/plan_TEMPLATE_01',\n    updated_at: new Date().toISOString()\n  }\n}];"
+      }
+    },
+    {
+      "id": "db-01",
+      "name": "Upsert MongoDB Atlas CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nif (!d.valid) return [{ json: d }];\nconst { MongoClient } = require('mongodb');\nconst uri = $env.MONGODB_URI;\nif (!uri) throw new Error('MONGODB_URI is not set');\nconst client = new MongoClient(uri);\nawait client.connect();\ntry {\n  const db = client.db($env.MONGODB_DB || 'automation_hub');\n  const doc = {\n    discord_user_id: d.discord_user_id,\n    discord_username: d.discord_username,\n    full_name: d.full_name,\n    email: d.email,\n    phone: d.phone_e164,\n    phoneE164: d.phone_e164,\n    country: d.country,\n    trading_level: d.trading_level,\n    watched_videos: d.watched_videos,\n    status: 'pending_whop_otp',\n    whop_otp_verified: false,\n    paid: false,\n    updated_at: new Date()\n  };\n  await db.collection('trading_leads').updateOne({ email: d.email }, { $set: doc, $setOnInsert: { created_at: new Date() } }, { upsert: true });\n  await db.collection('leads').updateOne({ email: d.email }, { $set: doc, $setOnInsert: { created_at: new Date() } }, { upsert: true });\n  await db.collection('client_files').updateOne({ discord_user_id: d.discord_user_id || d.email }, { $set: doc, $setOnInsert: { created_at: new Date() } }, { upsert: true });\n} finally {\n  await client.close();\n}\nreturn [{ json: d }];"
+      }
+    },
+    {
+      "id": "resp-01",
+      "name": "Respond Validated",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Intake Webhook": {
+      "main": [
+        [
+          {
+            "node": "Zero-Trust Header Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zero-Trust Header Auth": {
+      "main": [
+        [
+          {
+            "node": "Strict Mail & Phone Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strict Mail & Phone Validation": {
+      "main": [
+        [
+          {
+            "node": "Upsert MongoDB Atlas CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert MongoDB Atlas CRM": {
+      "main": [
+        [
+          {
+            "node": "Respond Validated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

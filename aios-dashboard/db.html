@@ -1,0 +1,1913 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<title>Tradesejon AIOS | مستكشف قاعدة بيانات Mongo (Web GUI)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #040710;
+  --panel: #0b1120;
+  --card: #0f172a;
+  --border: #1e293b;
+  --accent: #f59e0b;
+  --blue: #38bdf8;
+  --green: #10b981;
+  --red: #ef4444;
+  --purple: #a855f7;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+/* Sleek universal dark scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+/* Header */
+.header-bar {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-icon {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.1rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+.logo-text h1 {
+  font-size: 1.18rem;
+  font-weight: 900;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-text p {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  direction: ltr;
+  text-align: right;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn {
+  background: #1e293b;
+  color: #f1f5f9;
+  border: 1px solid #334155;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: 0.2s;
+}
+.btn:hover {
+  background: #334155;
+  border-color: #475569;
+}
+.btn-primary {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+.btn-primary:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10b981;
+}
+.btn-accent {
+  background: rgba(245, 158, 11, 0.16);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.btn-accent:hover {
+  background: rgba(245, 158, 11, 0.26);
+  border-color: #f59e0b;
+}
+.btn-danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.26);
+  border-color: #ef4444;
+}
+
+/* Status Strip */
+.status-strip {
+  background: #070b14;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.82rem;
+}
+.uri-badge {
+  font-family: 'JetBrains Mono', monospace;
+  direction: ltr;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: #38bdf8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.8s infinite;
+}
+@keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+
+/* Main layout: Sidebar + Data View */
+.main-layout {
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  flex: 1;
+  min-height: 0;
+}
+@media (max-width: 900px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Sidebar with collections */
+.collections-sidebar {
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+}
+.sidebar-title {
+  font-size: 0.84rem;
+  font-weight: 900;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 4px 8px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.coll-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #0b1329;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: 0.2s;
+  text-decoration: none;
+}
+.coll-item:hover {
+  background: #1e293b;
+  border-color: var(--green);
+  color: #fff;
+}
+.coll-item.active {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: var(--green);
+  color: #34d399;
+  font-weight: 700;
+}
+.coll-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.coll-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.86rem;
+  direction: ltr;
+  text-align: right;
+}
+.coll-desc {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+.coll-badge {
+  background: #1e293b;
+  color: #38bdf8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #334155;
+}
+.coll-item.active .coll-badge {
+  background: rgba(16, 185, 129, 0.25);
+  color: #34d399;
+  border-color: #10b981;
+}
+
+/* Data Content Area */
+.data-content {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+.toolbar-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #070b14;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  gap: 8px;
+  flex: 1;
+  max-width: 420px;
+}
+.search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #fff;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.88rem;
+  width: 100%;
+}
+.view-toggle {
+  display: flex;
+  background: #070b14;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.toggle-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.toggle-btn.active {
+  background: #1e293b;
+  color: #38bdf8;
+}
+
+/* Stats Row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.stat-box {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+}
+.stat-lbl { font-size: 0.78rem; color: var(--muted); }
+.stat-val { font-size: 1.35rem; font-weight: 900; margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
+
+/* Table View */
+.table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow-x: auto;
+}
+table.mongo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  text-align: right;
+}
+table.mongo-table th {
+  background: #0b1120;
+  padding: 10px 14px;
+  color: #94a3b8;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.mongo-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e293b;
+  vertical-align: middle;
+}
+table.mongo-table tr:hover td {
+  background: rgba(30, 41, 59, 0.4);
+}
+.badge-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  background: #1e293b;
+  color: #38bdf8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  direction: ltr;
+  display: inline-block;
+}
+.badge-vip { background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; }
+.badge-warm { background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; }
+.badge-open { background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.75rem; }
+
+/* JSON Code View */
+.json-cards-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.doc-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: 0.2s;
+}
+.doc-card:hover {
+  border-color: #334155;
+}
+.doc-card-header {
+  background: #0b1120;
+  padding: 8px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1e293b;
+  font-size: 0.8rem;
+}
+.doc-card-body {
+  padding: 12px 16px;
+  background: #040710;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  direction: ltr;
+  text-align: left;
+  overflow-x: auto;
+  max-height: 280px;
+  line-height: 1.5;
+}
+
+/* Modals */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.active { display: flex; }
+.modal-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 650px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+.modal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-body textarea {
+  width: 100%;
+  height: 320px;
+  background: #070b14;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: #38bdf8;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  padding: 10px;
+  direction: ltr;
+  text-align: left;
+  resize: vertical;
+}
+.modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Toast */
+.toast-msg {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #1e293b;
+  border: 1px solid var(--green);
+  color: #34d399;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toast-msg.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Award-Winning Institutional Glassmorphism for Mongo Explorer */
+body {
+  background-color: #03050c !important;
+  background-image:
+    radial-gradient(at 15% 10%, rgba(16, 185, 129, 0.08) 0px, transparent 45%),
+    radial-gradient(at 85% 15%, rgba(56, 189, 248, 0.08) 0px, transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px !important;
+}
+.header-bar {
+  background: rgba(9, 14, 28, 0.82) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+.toolbar-card, .table-container, .doc-card, .stat-box {
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.78) 0%, rgba(8, 13, 25, 0.88) 100%) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  box-shadow: 0 14px 35px -10px rgba(0, 0, 0, 0.55) !important;
+}
+
+
+/* ==========================================================================
+   THINKING ORBS 3D & OBSIDIAN GLASS THEME (#070707 + INTERACTIVE TILT)
+   ========================================================================== */
+:root {
+  --bg: #070707 !important;
+  --panel: rgba(20, 20, 22, 0.72) !important;
+  --card: rgba(29, 29, 29, 0.42) !important;
+  --border: rgba(44, 47, 54, 0.48) !important;
+}
+
+body {
+  background-color: #070707 !important;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.045) 0%, transparent 55%),
+    radial-gradient(circle at 85% 20%, rgba(245, 158, 11, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 15% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 45%) !important;
+  perspective: 1200px;
+}
+
+.kpi-card, .chat-box, .mini-chart-panel, .table-wrap, .stat-box, .toolbar-card, .container, .coll-item {
+  background: rgba(29, 29, 29, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 54, 0.38),
+    inset 0 0 50px 0 rgba(255, 255, 255, 0.015),
+    0 18px 40px -15px rgba(0, 0, 0, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(22px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.kpi-card::before, .stat-box::before, .thinking-orb-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    380px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.065),
+    transparent 45%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Official Thinking Orb Pill (Exact match to demo.tsx + 3D interactive controls) */
+.thinking-orb-pill {
+  display: inline-flex;
+  height: 70px;
+  align-items: center;
+  gap: 14px;
+  border-radius: 9999px;
+  padding: 0 24px 0 11px;
+  background: rgba(29, 29, 29, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 54, 0.31),
+    inset 0 0 50px 0 rgba(255, 255, 255, 0.012),
+    0 14px 34px rgba(0, 0, 0, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.thinking-orb-pill:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.38),
+    inset 0 0 55px 0 rgba(245, 158, 11, 0.04),
+    0 18px 42px rgba(0, 0, 0, 0.8) !important;
+}
+.thinking-orb-canvas-wrap {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.thinking-orb-canvas-wrap canvas {
+  width: 56px !important;
+  height: 56px !important;
+  display: block;
+}
+.thinking-orb-status-text {
+  white-space: nowrap;
+  font-size: 1.02rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: rgba(251, 251, 251, 0.62);
+  letter-spacing: 0.2px;
+}
+.orb-state-chip {
+  background: rgba(29, 29, 29, 0.55);
+  border: 1px solid rgba(44, 47, 54, 0.55);
+  color: rgba(251, 251, 251, 0.65);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.orb-state-chip:hover, .orb-state-chip.active {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+
+
+
+
+
+
+/* ==========================================================================
+   GLOWING SHADOW (@property --hue, --rotate, --bg-x, --bg-y) & MINIMAL BLACK
+   Source: components/ui/glowing-shadow.tsx (hsl(260deg 100% 3%) / #03000a)
+   Lazy-Mounted 60fps Architecture:
+   - inherits: false prevents cascade recalculation across the DOM.
+   - Idle buttons have content: none (0 pseudo-elements, 0 GPU layers when idle).
+   - Lights mount LAZILY ONLY on the specific button under mouse :hover!
+   ========================================================================== */
+@property --hue {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --rotate {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-x {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --glow-translate-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-size {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+@property --glow-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --glow-blur {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 3.5;
+}
+@property --glow-scale {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1.5;
+}
+@property --glow-radius {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 100;
+}
+@property --white-shadow {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes shadow-pulse {
+  0%, 24%, 46%, 73%, 96% { --white-shadow: 0.5; }
+  12%, 28%, 41%, 63%, 75%, 82%, 98% { --white-shadow: 2.2; }
+  6%, 32%, 57% { --white-shadow: 1.2; }
+  18%, 52%, 88% { --white-shadow: 3.0; }
+}
+
+@keyframes rotate-bg {
+  0% { --bg-x: 0; --bg-y: 0; }
+  25% { --bg-x: 100; --bg-y: 0; }
+  50% { --bg-x: 100; --bg-y: 100; }
+  75% { --bg-x: 0; --bg-y: 100; }
+  100% { --bg-x: 0; --bg-y: 0; }
+}
+
+@keyframes rotate {
+  from { --rotate: -70; --glow-translate-y: -65; }
+  25%, 50%, 60%, 75%, 85% { --glow-translate-y: -65; }
+  to { --rotate: 290; --glow-translate-y: -65; }
+}
+
+@keyframes hue-animation {
+  0% { --hue: 0; }
+  100% { --hue: 360; }
+}
+
+:root {
+  --bg: #020204 !important;
+  --panel: #040308 !important;
+  --card: hsl(260deg 100% 3%) !important;
+  --card-color: hsl(260deg 100% 3%) !important;
+  --border: rgba(255, 255, 255, 0.07) !important;
+  --hue-speed: 1;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+}
+
+html, body {
+  background-color: #020204 !important;
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 60%) !important;
+  color: #f8fafc !important;
+}
+
+.sidebar, .topbar, .header-bar, .status-strip, .collections-sidebar, .institutional-pulse-bar, .market-ticker-strip, .chat-header-bar, .chat-input-bar, .markets-toolbar, .modal, .modal-box, .cmd-palette-box, .mobile-bottom-nav {
+  background: #040308 !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Official GlowingShadow Component Classes */
+.glow-container {
+  --card-color: hsl(260deg 100% 3%);
+  --text-color: hsl(260deg 10% 55%);
+  --card-radius: 16px;
+  --border-width: 2px;
+  --bg-size: 1;
+  --hue: 0;
+  --hue-speed: 1;
+  --rotate: 0;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+  --glow-scale: 1.5;
+  --scale-factor: 1;
+  --glow-blur: 4;
+  --glow-opacity: 0;
+  --glow-radius: 100;
+  --glow-rotate-unit: 1deg;
+  position: relative;
+  z-index: 2;
+  border-radius: var(--card-radius);
+  cursor: pointer;
+}
+
+/* Minimal Black Idle State on All Clickable Positions & Buttons (NO lights & 0 extra GPU layers when idle) */
+.btn,
+.nav-btn,
+.kpi-card,
+.ticker-pill,
+.chip-btn,
+.sym-btn,
+.tf-btn,
+.toggle-btn,
+.coll-item,
+.stat-box,
+.session-widget,
+.pulse-metric,
+.cmd-item,
+.m-nav-item,
+.submit-btn,
+.thinking-orb-pill,
+#btnExecCommandHub {
+  --card-color: hsl(260deg 100% 3%);
+  --border-width: 2px;
+  --bg-size: 1;
+  --hue: 0;
+  --hue-speed: 1;
+  --rotate: 0;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+  --white-shadow: 0;
+  background: hsl(260deg 100% 3%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 8px 22px -6px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, color 0.16s ease !important;
+}
+
+/* Lazy Unmounted Idle Pseudo-Elements (content: none = 0 GPU memory & 0 paint cost when not hovered) */
+.btn::before,
+.nav-btn::before,
+.kpi-card::before,
+.ticker-pill::before,
+.chip-btn::before,
+.sym-btn::before,
+.tf-btn::before,
+.toggle-btn::before,
+.coll-item::before,
+.stat-box::before,
+.session-widget::before,
+.pulse-metric::before,
+.cmd-item::before,
+.m-nav-item::before,
+.submit-btn::before,
+.thinking-orb-pill::before,
+#btnExecCommandHub::before,
+.btn::after,
+.nav-btn::after,
+.kpi-card::after,
+.ticker-pill::after,
+.chip-btn::after,
+.sym-btn::after,
+.tf-btn::after,
+.toggle-btn::after,
+.coll-item::after,
+.stat-box::after,
+.session-widget::after,
+.pulse-metric::after,
+.cmd-item::after,
+.m-nav-item::after,
+.submit-btn::after,
+.thinking-orb-pill::after,
+#btnExecCommandHub::after {
+  content: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Clean Minimal Active State (Subtle border contrast, NO permanent rainbow lights) */
+.nav-btn.active,
+.ticker-pill.active,
+.sym-btn.active,
+.tf-btn.active,
+.toggle-btn.active,
+.coll-item.active,
+.m-nav-item.active {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* Mouse Hover ONLY -> Lazily Mount & Run 60fps GlowingShadow Light on That Single Button */
+.btn:hover,
+.nav-btn:hover,
+.kpi-card:hover,
+.ticker-pill:hover,
+.chip-btn:hover,
+.sym-btn:hover,
+.tf-btn:hover,
+.toggle-btn:hover,
+.coll-item:hover,
+.stat-box:hover,
+.session-widget:hover,
+.pulse-metric:hover,
+.cmd-item:hover,
+.m-nav-item:hover,
+.submit-btn:hover,
+.thinking-orb-pill:hover,
+#btnExecCommandHub:hover {
+  color: #ffffff !important;
+  background: hsl(260deg 100% 4%) !important;
+  isolation: isolate;
+  will-change: transform;
+  box-shadow:
+    0 0 calc(var(--white-shadow, 1.5) * 6px) calc(var(--white-shadow, 1.5) * 1px) rgba(255, 255, 255, 0.14),
+    0 12px 28px -6px rgba(0, 0, 0, 0.95) !important;
+  animation: shadow-pulse calc(var(--animation-speed) * 2) linear infinite;
+  transform: translateY(-1.5px);
+}
+
+.btn:hover::before,
+.nav-btn:hover::before,
+.kpi-card:hover::before,
+.ticker-pill:hover::before,
+.chip-btn:hover::before,
+.sym-btn:hover::before,
+.tf-btn:hover::before,
+.toggle-btn:hover::before,
+.coll-item:hover::before,
+.stat-box:hover::before,
+.session-widget:hover::before,
+.pulse-metric:hover::before,
+.cmd-item:hover::before,
+.m-nav-item:hover::before,
+.submit-btn:hover::before,
+.thinking-orb-pill:hover::before,
+#btnExecCommandHub:hover::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  --bg-size: 6;
+  opacity: 1;
+  background: hsl(0deg 0% 10%) radial-gradient(
+    45% 65% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 85%) calc(0% * var(--bg-size)),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 68%) calc(22% * var(--bg-size)),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 52%) calc(45% * var(--bg-size)),
+    transparent 100%
+  );
+  animation: hue-animation var(--animation-speed) linear infinite,
+             rotate-bg var(--animation-speed) linear infinite;
+  animation-play-state: running;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1.5px;
+}
+
+.btn:hover::after,
+.nav-btn:hover::after,
+.kpi-card:hover::after,
+.ticker-pill:hover::after,
+.chip-btn:hover::after,
+.sym-btn:hover::after,
+.tf-btn:hover::after,
+.toggle-btn:hover::after,
+.coll-item:hover::after,
+.stat-box:hover::after,
+.session-widget:hover::after,
+.pulse-metric:hover::after,
+.cmd-item:hover::after,
+.m-nav-item:hover::after,
+.submit-btn:hover::after,
+.thinking-orb-pill:hover::after,
+#btnExecCommandHub:hover::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.85;
+  background: radial-gradient(
+    60% 60% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 60% / 0.25),
+    transparent 80%
+  );
+  filter: blur(8px);
+  animation: hue-animation var(--animation-speed) linear infinite,
+             rotate-bg var(--animation-speed) linear infinite;
+  animation-play-state: running;
+}
+
+/* Minimal Black Panels & Clickable Table Rows */
+.chat-box, .mini-chart-panel, .table-wrap, .toolbar-card, .container, .doc-card {
+  background: hsl(260deg 100% 3%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
+}
+
+table tbody tr {
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.05);
+}
+
+input, select, textarea {
+  background: #030207 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.1) !important;
+}
+
+</style>
+</head>
+<body>
+
+<div class="app-container">
+
+  <!-- Header Bar -->
+  <header class="header-bar">
+    <div class="brand-title">
+      <div class="logo-icon" style="background:rgba(29,29,29,0.65); border:1px solid rgba(44,47,54,0.6); width:46px; height:46px; border-radius:999px;"><canvas id="dbOrbCanvas" width="38" height="38"></canvas></div>
+      <div class="logo-text">
+        <h1>Tradesejon AIOS | مستكشف قاعدة بيانات Mongo</h1>
+        <p>MongoDB 7.0.14 Engine &bull; Tradesejon Institutional Database Explorer</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div style="display:inline-flex; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:2px; gap:2px;">
+        <button id="dbLangAr" class="btn" style="padding:4px 9px; font-size:0.78rem; background:rgba(245,158,11,0.25); color:#f59e0b; border:none; border-radius:6px; font-weight:800; cursor:pointer;" onclick="setDbLanguage('ar')">AR</button>
+        <button id="dbLangEn" class="btn" style="padding:4px 9px; font-size:0.78rem; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-weight:800; cursor:pointer;" onclick="setDbLanguage('en')">EN</button>
+      </div>
+      <a href="/" class="btn btn-primary" id="dbBtnBack">🚀 منصة AIOS الكاملة</a>
+      <a href="http://localhost:8081/db/tradesejon/" target="_blank" class="btn" id="dbBtnLocal">⚡ Mongo Express المحلي (8081)</a>
+      <a href="/tradesejon_database_export.zip" class="btn btn-accent" id="dbBtnExportZip" download>📥 تحميل النسخة الكاملة (.ZIP)</a>
+      <a href="/tradesejon_n8n_workflows_package.zip" class="btn" id="dbBtnN8nZip" style="background:rgba(168, 85, 247, 0.2); color:#c084fc; border-color:rgba(168,85,247,0.5);" download>⚡ تحميل حزمة n8n Workflows (.ZIP)</a>
+      <a href="/tradesejon_remote_agent_bundle.zip" class="btn" id="dbBtnRemoteZip" style="background:rgba(56, 189, 248, 0.18); color:#38bdf8; border-color:rgba(56,189,248,0.45);" download>☁️ حزمة Remote Agent (.ZIP)</a>
+      <button class="btn" id="dbBtnRefresh" onclick="fetchCollectionsAndData()">🔄 تحديث</button>
+    </div>
+  </header>
+
+  <!-- Status Strip -->
+  <div class="status-strip">
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <div class="uri-badge">
+        <span class="pulse-dot"></span>
+        <span id="connUriLabel">mongodb://127.0.0.1:27017/tradesejon</span>
+      </div>
+      <span style="color:#34d399; font-weight:700;" id="connStatusText">● قاعدة البيانات متصلة ومحدثة لحظياً</span>
+    </div>
+    <div style="color:var(--muted); font-size:0.8rem;" id="lastSyncTime">
+      آخر تحديث: جارٍ التحميل...
+    </div>
+  </div>
+
+  <!-- Main 2-column layout -->
+  <div class="main-layout">
+
+    <!-- Sidebar: 8 Collections -->
+    <aside class="collections-sidebar">
+      <div id="collectionsListContainer" style="display:flex; flex-direction:column; gap:6px;">
+        <!-- Populated dynamically -->
+      </div>
+
+      <div style="margin-top:auto; padding-top:14px; border-top:1px solid var(--border); font-size:0.75rem; color:var(--muted); line-height:1.6;">
+        <div>📊 المحرك: <span style="color:#fff;">MongoDB 7.0 Community</span></div>
+        <div>🔒 الأمان: <span style="color:#34d399;">مشفر محلياً + سحابياً</span></div>
+        <div>⚡ المزامنة: <span style="color:#fbbf24;">Ultra Super Memory Active</span></div>
+      </div>
+    </aside>
+
+    <!-- Data Content View -->
+    <main class="data-content">
+
+      <!-- Stats Overview -->
+      <div class="stats-row">
+        <div class="stat-box" onclick="setViewMode(viewMode === 'table' ? 'json' : 'table')" style="cursor:pointer;" title="اضغط للتبديل بين الجدول المنظم وعرض JSON">
+          <div class="stat-lbl">المجموعة الحالية</div>
+          <div class="stat-val" id="statCurColl" style="color:var(--green);">-</div>
+        </div>
+        <div class="stat-box" onclick="openInsertModal()" style="cursor:pointer;" title="اضغط لإضافة وثيقة جديدة في هذه المجموعة">
+          <div class="stat-lbl">إجمالي الوثائق</div>
+          <div class="stat-val" id="statCurCount" style="color:#38bdf8;">0</div>
+        </div>
+        <div class="stat-box" onclick="window.location.href='/tradesejon_database_export.zip'" style="cursor:pointer;" title="اضغط لتحميل النسخة الكاملة لقاعدة البيانات (.ZIP)">
+          <div class="stat-lbl">إجمالي قاعدة البيانات</div>
+          <div class="stat-val" id="statDbTotalDocs" style="color:#fbbf24;">216 وثيقة</div>
+        </div>
+        <div class="stat-box" onclick="fetchCollectionsAndData()" style="cursor:pointer;" title="اضغط لتحديث ومزامنة محرك MongoDB">
+          <div class="stat-lbl">الحجم والذاكرة</div>
+          <div class="stat-val" style="color:#a855f7;">MongoDB WiredTiger</div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar-card">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="searchInput" placeholder="بحث فوري في المستندات (بالاسم، الإيميل، الرسالة، المعرف)..." oninput="handleSearch()">
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <div class="view-toggle">
+            <button class="toggle-btn active" id="btnViewTable" onclick="setViewMode('table')">جدول منظم</button>
+            <button class="toggle-btn" id="btnViewJson" onclick="setViewMode('json')">مستندات JSON</button>
+          </div>
+          <button class="btn btn-primary" onclick="openInsertModal()">➕ وثيقة جديدة</button>
+          <button class="btn" onclick="exportCurrentCollectionJson()">📥 تصدير JSON</button>
+        </div>
+      </div>
+
+      <!-- Container: Table View -->
+      <div id="tableViewWrap" class="table-wrap">
+        <table class="mongo-table">
+          <thead id="mongoTableHeader">
+            <tr><th>_id</th><th>البيانات</th><th>تاريخ الإنشاء</th><th>إجراءات</th></tr>
+          </thead>
+          <tbody id="mongoTableBody">
+            <tr><td colspan="4" style="text-align:center; padding:30px; color:var(--muted);">جارٍ تحميل البيانات من MongoDB...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Container: JSON Code View -->
+      <div id="jsonViewWrap" class="json-cards-wrap" style="display:none;">
+        <!-- Populated dynamically -->
+      </div>
+
+      <!-- Pagination Footer -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:10px 4px;">
+        <div style="font-size:0.82rem; color:var(--muted);" id="paginationInfo">عرض 0 من 0 وثيقة</div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn" id="btnPrevPage" onclick="changePage(-1)" disabled>&rarr; السابق</button>
+          <button class="btn" id="btnNextPage" onclick="changePage(1)" disabled>التالي &larr;</button>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<!-- Insert Document Modal -->
+<div class="modal-overlay" id="insertModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-size:1.05rem; color:#34d399;">➕ إضافة وثيقة جديدة إلى <span id="modalCollName"></span></h3>
+      <button class="btn" onclick="closeModal('insertModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.82rem; color:var(--muted);">أدخل بيانات الوثيقة بصيغة JSON صحيحة:</p>
+      <textarea id="insertJsonArea"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('insertModal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="submitInsertDoc()">💾 حفظ الوثيقة في MongoDB</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Document Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 style="font-size:1.05rem; color:#38bdf8;">✏️ تعديل الوثيقة: <span id="editDocIdBadge" class="badge-id"></span></h3>
+      <button class="btn" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.82rem; color:var(--muted);">تعديل محتوى JSON مباشرة (سيتم حفظ التعديلات فوراً):</p>
+      <textarea id="editJsonArea"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('editModal')">إلغاء</button>
+      <button class="btn btn-primary" onclick="submitUpdateDoc()">💾 حفظ التعديلات</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-msg" id="toastBox">
+  <span>✓</span>
+  <span id="toastText">تمت العملية بنجاح</span>
+</div>
+
+<script>
+
+function toEnglishDigits(val) {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u06F0-\u06F9]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48));
+}
+
+// Collection Metadata Dictionary
+const COLLECTION_METAS = {
+  'trading_leads': { ar: 'بيانات واستمارات المتداولين', en: 'Trader Qualification Leads', icon: '🎯' },
+  'ceo_super_memory': { ar: 'الذاكرة الفائقة للمحادثات', en: 'Ultra Super Conversation Memory', icon: '🧠' },
+  'telegram_messages': { ar: 'أرشيف رسائل التليجرام', en: 'Telegram Messages Archive', icon: '💬' },
+  'conversations': { ar: 'تذاكر دعم العملاء (PR)', en: 'PR & Support Conversations', icon: '🎫' },
+  'contacts': { ar: 'سجل جهات الاتصال (CRM)', en: 'Trader Contacts Directory (CRM)', icon: '👥' },
+  'mail_queue': { ar: 'طابور رسائل البريد', en: 'Outbound Email Queue', icon: '📬' },
+  'ceo_knowledge_base': { ar: 'قاعدة المعرفة التنفيذية', en: 'Executive Knowledge Base', icon: '📚' },
+  'aios_config': { ar: 'إعدادات وتكوين النظام', en: 'AIOS System Configuration', icon: '⚙️' }
+};
+
+let currentCollection = 'trading_leads';
+let currentDocs = [];
+let filteredDocs = [];
+let collectionsList = [];
+let viewMode = 'table';
+let curPage = 1;
+const pageSize = 50;
+let editTargetId = null;
+
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  fetchCollectionsAndData();
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toastBox');
+  const txt = document.getElementById('toastText');
+  if (!t || !txt) return;
+  txt.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function fetchCollectionsAndData() {
+  try {
+    let res = await fetch('/api/db/collections');
+    let data;
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      // Fallback to static snapshot if offline
+      res = await fetch('/db-fallback.json');
+      const fb = await res.json();
+      data = {
+        ok: true,
+        db_name: fb.db_name,
+        uri: fb.uri,
+        collections: Object.keys(fb.collections).map(k => ({
+          name: k,
+          count: fb.collections[k].length,
+          fields: Object.keys(fb.collections[k][0] || {})
+        })),
+        total_collections: Object.keys(fb.collections).length,
+        total_documents: Object.values(fb.collections).reduce((a, b) => a + b.length, 0),
+        _fallback_data: fb.collections
+      };
+      window.cachedFallbackCollections = fb.collections;
+    }
+
+    if (data && data.collections) {
+      collectionsList = data.collections;
+      renderSidebarCollections(collectionsList);
+      document.getElementById('statDbTotalDocs').textContent = data.total_documents + ' وثيقة';
+      document.getElementById('connStatusText').textContent = '● قاعدة البيانات متصلة ومحدثة لحظياً';
+      document.getElementById('lastSyncTime').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('en-US');
+      loadCollectionData(currentCollection);
+    }
+  } catch (err) {
+    console.error('Error fetching collections:', err);
+    // Try local fallback
+    try {
+      const fbRes = await fetch('/db-fallback.json');
+      const fb = await fbRes.json();
+      window.cachedFallbackCollections = fb.collections;
+      const colls = Object.keys(fb.collections).map(k => ({
+        name: k,
+        count: fb.collections[k].length,
+        fields: Object.keys(fb.collections[k][0] || {})
+      }));
+      renderSidebarCollections(colls);
+      loadCollectionData(currentCollection);
+      document.getElementById('connStatusText').textContent = '● نسخة محلية جاهزة (Offline Snapshot Active)';
+    } catch (e) {
+      document.getElementById('connStatusText').textContent = '⚠️ جارٍ انتظار اتصال السيرفر المحلي...';
+    }
+  }
+}
+
+function renderSidebarCollections(colls) {
+  const container = document.getElementById('collectionsListContainer');
+  if (!container) return;
+
+  let html = '';
+  for (const c of colls) {
+    const meta = COLLECTION_METAS[c.name] || { ar: c.name, icon: '📁' };
+    const activeCls = c.name === currentCollection ? 'active' : '';
+    html += `
+      <div class="coll-item ${activeCls}" onclick="switchCollection('${c.name}')">
+        <div class="coll-info">
+          <div class="coll-name">${meta.icon} ${c.name}</div>
+          <div class="coll-desc">${(typeof currentDbLang!=='undefined'&&currentDbLang==='en')?(meta.en||c.name):meta.ar}</div>
+        </div>
+        <span class="coll-badge">${c.count}</span>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+  const _b = document.getElementById('totalCollsCountBadge'); if (_b) _b.textContent = colls.length;
+}
+
+function switchCollection(collName) {
+  currentCollection = collName;
+  curPage = 1;
+  document.querySelectorAll('.coll-item').forEach(el => {
+    el.classList.toggle('active', el.textContent.includes(collName));
+  });
+  loadCollectionData(collName);
+}
+
+async function loadCollectionData(collName) {
+  document.getElementById('statCurColl').textContent = collName;
+  const tbody = document.getElementById('mongoTableBody');
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--muted);">جارٍ تحميل مستندات ' + collName + '...</td></tr>';
+
+  try {
+    let docs = [];
+    const res = await fetch(`/api/db/docs?coll=${collName}&limit=100`);
+    if (res.ok) {
+      const json = await res.json();
+      docs = json.documents || [];
+    } else if (window.cachedFallbackCollections && window.cachedFallbackCollections[collName]) {
+      docs = window.cachedFallbackCollections[collName];
+    } else {
+      const fbRes = await fetch('/db-fallback.json');
+      const fb = await fbRes.json();
+      window.cachedFallbackCollections = fb.collections;
+      docs = fb.collections[collName] || [];
+    }
+
+    currentDocs = docs;
+    filteredDocs = [...currentDocs];
+    document.getElementById('statCurCount').textContent = currentDocs.length;
+    renderCurrentView();
+  } catch (err) {
+    console.error('Error loading docs:', err);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--red);">فشل جلب البيانات من السيرفر.</td></tr>';
+  }
+}
+
+function handleSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (!q) {
+    filteredDocs = [...currentDocs];
+  } else {
+    filteredDocs = currentDocs.filter(d => {
+      const str = JSON.stringify(d).toLowerCase();
+      return str.includes(q);
+    });
+  }
+  curPage = 1;
+  renderCurrentView();
+}
+
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById('btnViewTable').classList.toggle('active', mode === 'table');
+  document.getElementById('btnViewJson').classList.toggle('active', mode === 'json');
+  document.getElementById('tableViewWrap').style.display = mode === 'table' ? 'block' : 'none';
+  document.getElementById('jsonViewWrap').style.display = mode === 'json' ? 'flex' : 'none';
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  const total = filteredDocs.length;
+  const start = (curPage - 1) * pageSize;
+  const pageDocs = filteredDocs.slice(start, start + pageSize);
+
+  const _isEn = (typeof currentDbLang !== 'undefined' && currentDbLang === 'en'); document.getElementById('paginationInfo').textContent = _isEn ? `Showing ${pageDocs.length} of ${total} documents (Page ${curPage} of ${Math.max(1, Math.ceil(total / pageSize))})` : `عرض ${pageDocs.length} من أصل ${total} وثيقة (صفحة ${curPage} من ${Math.max(1, Math.ceil(total / pageSize))})`;
+  document.getElementById('btnPrevPage').disabled = curPage <= 1;
+  document.getElementById('btnNextPage').disabled = start + pageSize >= total;
+
+  if (viewMode === 'table') {
+    renderTableView(pageDocs);
+  } else {
+    renderJsonView(pageDocs);
+  }
+}
+
+function changePage(delta) {
+  curPage += delta;
+  renderCurrentView();
+}
+
+
+// Intelligent Bilingual Schema Definition for all 8 collections (with WhatsApp + Telegram side-by-side)
+const COLLECTION_SCHEMAS = {
+  'contacts': [
+    {
+      header: 'الاسم (Name)',
+      header_en: 'Full Name',
+      render: d => {
+        const isEn = (typeof currentDbLang !== 'undefined' && currentDbLang === 'en');
+        const name = d.name || d.full_name || [d.first_name, d.last_name].filter(Boolean).join(' ') || d.username || d.contact_identifier || (isEn ? 'Unspecified' : 'غير محدد');
+        return `<strong style="color:#f8fafc; font-size:0.92rem;">👤 ${escapeHtml(name)}</strong>`;
+      }
+    },
+    {
+      header: 'رقم الهاتف والتواصل (Number)',
+      header_en: 'Phone & Direct Contact',
+      render: d => {
+        const isEn = (typeof currentDbLang !== 'undefined' && currentDbLang === 'en');
+        const waTxt = isEn ? 'WhatsApp ↗' : 'واتساب ↗';
+        const tgTxt = isEn ? 'Telegram ↗' : 'تيليجرام ↗';
+        const unregTxt = isEn ? 'Unregistered' : 'غير مسجل';
+        const p = d.number || d.phone_number || d.phone || '';
+        const cleanP = p.replace(/[^0-9]/g, '');
+        const rawTg = String(d.telegram_user || d.username || '').replace(/^@/, '').trim();
+        const tgUrl = rawTg ? `https://t.me/${rawTg}` : (cleanP ? `https://t.me/+${cleanP}` : 'https://t.me/YOUR_CEO_BOT');
+        return `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          ${p
+            ? `<span style="font-family:'JetBrains Mono',monospace; color:#38bdf8; font-weight:700; direction:ltr;">📞 ${escapeHtml(p)}</span>
+               <a href="https://wa.me/${cleanP}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 6px; font-size:0.7rem; color:#34d399; text-decoration:none;">${waTxt}</a>`
+            : `<span style="color:var(--muted); font-size:0.8rem;">${unregTxt}</span>`
+          }
+          <a href="${tgUrl}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 6px; font-size:0.7rem; color:#38bdf8; text-decoration:none;">${tgTxt}</a>
+        </div>`;
+      }
+    },
+    {
+      header: 'المنصة (Platform)',
+      header_en: 'Platform',
+      render: d => `<span class="badge-warm">${escapeHtml(d.platform || 'web')}</span>`
+    },
+    {
+      header: 'البريد / المعرف',
+      header_en: 'Email / Identifier',
+      render: d => d.email ? `<span style="direction:ltr; font-size:0.8rem;">${escapeHtml(d.email)}</span>` : `<span class="badge-id">${escapeHtml(d.contact_identifier || '')}</span>`
+    }
+  ],
+  'trading_leads': [
+    {
+      header: 'الاسم (Name)',
+      header_en: 'Full Name',
+      render: d => {
+        const isEn = (typeof currentDbLang !== 'undefined' && currentDbLang === 'en');
+        return `<strong style="color:#f8fafc; font-size:0.92rem;">👤 ${escapeHtml(d.full_name || (isEn ? 'Unspecified' : 'غير محدد'))}</strong>`;
+      }
+    },
+    {
+      header: 'رقم الهاتف والتواصل (Number)',
+      header_en: 'Phone & Direct Contact',
+      render: d => {
+        const isEn = (typeof currentDbLang !== 'undefined' && currentDbLang === 'en');
+        const waTxt = isEn ? 'WhatsApp ↗' : 'واتساب ↗';
+        const tgTxt = isEn ? 'Telegram ↗' : 'تيليجرام ↗';
+        const unregTxt = isEn ? 'Unregistered' : 'غير مسجل';
+        const p = d.phone || d.phone_number || '';
+        const cleanP = p.replace(/[^0-9]/g, '');
+        const rawTg = String(d.telegram_user || d.username || '').replace(/^@/, '').trim();
+        const tgUrl = rawTg ? `https://t.me/${rawTg}` : (cleanP ? `https://t.me/+${cleanP}` : 'https://t.me/YOUR_CEO_BOT');
+        return `<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          ${p
+            ? `<span style="font-family:'JetBrains Mono',monospace; color:#38bdf8; font-weight:700; direction:ltr;">📞 ${escapeHtml(p)}</span>
+               <a href="https://wa.me/${cleanP}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 6px; font-size:0.7rem; color:#34d399; text-decoration:none;">${waTxt}</a>`
+            : `<span style="color:var(--muted); font-size:0.8rem;">${unregTxt}</span>`
+          }
+          <a href="${tgUrl}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 6px; font-size:0.7rem; color:#38bdf8; text-decoration:none;">${tgTxt}</a>
+        </div>`;
+      }
+    },
+    {
+      header: 'البريد (Email)',
+      header_en: 'Email',
+      render: d => `<span style="direction:ltr; font-size:0.82rem;">${escapeHtml(d.email || '')}</span>`
+    },
+    {
+      header: 'التقييم (Score)',
+      header_en: 'Lead Score',
+      render: d => d.lead_score === 'VIP' ? `<span class="badge-vip">VIP</span>` : `<span class="badge-warm">${escapeHtml(d.lead_score || 'WARM')}</span>`
+    },
+    {
+      header: 'الحالة (Status)',
+      header_en: 'Status',
+      render: d => `<span class="badge-open">${escapeHtml(d.status || 'pending')}</span>`
+    }
+  ],
+  'conversations': [
+    {
+      header: 'الاسم (Name)',
+      render: d => `<strong>👤 ${escapeHtml(d.full_name || d.username || 'عميل تداول')}</strong>`
+    },
+    {
+      header: 'رسالة العميل (User Message)',
+      render: d => `<div style="min-width:240px; max-width:420px; white-space:pre-wrap; word-break:break-word; color:#f8fafc; font-size:0.85rem; line-height:1.4;">${escapeHtml(d.user_message || '')}</div>`
+    },
+    {
+      header: 'رد النظام (Bot Answer)',
+      render: d => `<div style="min-width:240px; max-width:420px; white-space:pre-wrap; word-break:break-word; color:#cbd5e1; font-size:0.85rem; line-height:1.4;">${escapeHtml(d.bot_answer || '')}</div>`
+    },
+    {
+      header: 'التوقيت (Time)',
+      render: d => {
+        const t = d.created_at || '';
+        if (!t) return '<span style="color:var(--muted);">-</span>';
+        const dateObj = new Date(t);
+        const fmt = !isNaN(dateObj.getTime()) ? dateObj.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'medium' }) : t;
+        return `<span style="font-family:'JetBrains Mono',monospace; color:#38bdf8; font-size:0.78rem; direction:ltr; display:inline-block;">⏰ ${escapeHtml(fmt)}</span>`;
+      }
+    },
+    {
+      header: 'الحالة (Status)',
+      render: d => `<span class="badge-open">${escapeHtml(d.status || 'open')}</span>`
+    }
+  ],
+  'telegram_messages': [
+    {
+      header: 'الاسم (Name)',
+      render: d => `<strong>👤 ${escapeHtml(d.full_name || d.username || 'مستخدم تليجرام')}</strong>`
+    },
+    {
+      header: 'نص الرسالة بالكامل (Full Message)',
+      render: d => `<div style="min-width:280px; max-width:550px; white-space:pre-wrap; word-break:break-word; color:#f8fafc; font-size:0.86rem; line-height:1.5;">${escapeHtml(d.full_message || d.text || '')}</div>`
+    },
+    {
+      header: 'التوقيت (Time)',
+      render: d => {
+        const t = d.time || d.created_at || d.timestamp || '';
+        if (!t) return '<span style="color:var(--muted);">-</span>';
+        const dateObj = new Date(t);
+        const fmt = !isNaN(dateObj.getTime()) ? dateObj.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'medium' }) : t;
+        return `<span style="font-family:'JetBrains Mono',monospace; color:#38bdf8; font-size:0.78rem; direction:ltr; display:inline-block;">⏰ ${escapeHtml(fmt)}</span>`;
+      }
+    },
+    {
+      header: 'الاتجاه (Direction)',
+      render: d => d.direction === 'outgoing' ? `<span class="badge-open">صادر ↗</span>` : `<span class="badge-warm">وارد ↙</span>`
+    },
+    {
+      header: 'نوع البوت (Bot)',
+      render: d => d.bot_type === 'ceo' ? `<span class="badge-vip">👑 CEO Bot</span>` : `<span class="badge-warm">PR Bot</span>`
+    }
+  ],
+  'ceo_super_memory': [
+    {
+      header: 'سؤال الرئيس / المستخدم (Query)',
+      render: d => `<strong style="color:#f8fafc;">${escapeHtml(d.user_query || '')}</strong>`
+    },
+    {
+      header: 'رد الذكاء الاصطناعي (Reply)',
+      render: d => `<div style="max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#cbd5e1;">${escapeHtml(d.reply || '')}</div>`
+    },
+    {
+      header: 'المصدر (Source)',
+      render: d => `<span class="badge-warm">${escapeHtml(d.source || 'aios')}</span>`
+    }
+  ],
+  'mail_queue': [
+    {
+      header: 'الاسم (Name)',
+      render: d => `<strong>👤 ${escapeHtml(d.recipient_name || 'العميل')}</strong>`
+    },
+    {
+      header: 'البريد (Email)',
+      render: d => `<span style="direction:ltr;">${escapeHtml(d.recipient_email || '')}</span>`
+    },
+    {
+      header: 'الموضوع (Subject)',
+      render: d => `<div style="max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(d.subject || '')}</div>`
+    },
+    {
+      header: 'الحالة (Status)',
+      render: d => `<span class="badge-open">${escapeHtml(d.status || 'pending')}</span>`
+    }
+  ],
+  'ceo_knowledge_base': [
+    {
+      header: 'المفتاح (Key)',
+      render: d => `<span class="badge-id">${escapeHtml(d.key || '')}</span>`
+    },
+    {
+      header: 'المعلومة المعتمدة (Fact)',
+      render: d => `<strong style="color:#f8fafc;">${escapeHtml(d.fact || '')}</strong>`
+    },
+    {
+      header: 'التعليمات (Raw Instruction)',
+      render: d => `<div style="color:var(--muted);">${escapeHtml(d.raw_instruction || '')}</div>`
+    }
+  ],
+  'aios_config': [
+    {
+      header: 'المفتاح (Key)',
+      render: d => `<span class="badge-id">${escapeHtml(d.key || '')}</span>`
+    },
+    {
+      header: 'ميعاد الجلسة (Session Time)',
+      render: d => `<strong style="color:#34d399; font-size:1rem;">${escapeHtml(d.session_time || '')}</strong>`
+    },
+    {
+      header: 'المنطقة (Timezone)',
+      render: d => `<span class="badge-warm">${escapeHtml(d.timezone || '')}</span>`
+    },
+    {
+      header: 'الموضوع (Topic)',
+      render: d => escapeHtml(d.topic || '')
+    }
+  ]
+};
+
+
+function renderTableView(docs) {
+  const thead = document.getElementById('mongoTableHeader');
+  const tbody = document.getElementById('mongoTableBody');
+
+  if (docs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px; color:var(--muted);">لا توجد وثائق مطابقة.</td></tr>';
+    return;
+  }
+
+  // Use customized schema for current collection, or fallback
+  const schema = COLLECTION_SCHEMAS[currentCollection];
+
+  const isEn = (typeof currentDbLang !== 'undefined' && currentDbLang === 'en');
+  const editTxt = isEn ? '✏️ Edit' : '✏️ تعديل';
+  const delTxt = isEn ? '🗑️ Delete' : '🗑️ حذف';
+  const idHdr = isEn ? 'Document ID (_id)' : 'المعرف (_id)';
+  const actHdr = isEn ? 'Actions' : 'إجراءات';
+
+  if (schema) {
+    let headerHtml = `<tr><th>${idHdr}</th>`;
+    for (const col of schema) {
+      const hTitle = isEn ? (col.header_en || (col.header.match(/\(([^)]+)\)/)?.[1] || col.header)) : col.header;
+      headerHtml += `<th>${hTitle}</th>`;
+    }
+    headerHtml += `<th>${actHdr}</th></tr>`;
+    thead.innerHTML = headerHtml;
+
+    let bodyHtml = '';
+    for (const d of docs) {
+      const id = d._id || '';
+      bodyHtml += `<tr onclick="openEditModal('${id}')" style="cursor:pointer;" title="${isEn ? 'Click to view and edit full JSON document' : 'اضغط لفتح وتعديل الوثيقة بالكامل'}">`;
+      bodyHtml += `<td><span class="badge-id">${id}</span></td>`;
+      for (const col of schema) {
+        bodyHtml += `<td>${col.render(d)}</td>`;
+      }
+      bodyHtml += `
+        <td>
+          <div style="display:flex; gap:6px;">
+            <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); openEditModal('${id}')">${editTxt}</button>
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); deleteDoc('${id}')">${delTxt}</button>
+          </div>
+        </td>
+      `;
+      bodyHtml += `</tr>`;
+    }
+    tbody.innerHTML = bodyHtml;
+  } else {
+    // Fallback: exclude timestamps like first_seen_at / last_seen_at
+    const sample = docs[0];
+    const excludedKeys = ['_id', 'first_seen_at', 'last_seen_at', 'raw_update', 'raw_telegram_user', 'raw_last_update'];
+    const keys = Object.keys(sample).filter(k => !excludedKeys.includes(k) && typeof sample[k] !== 'object').slice(0, 4);
+
+    let headerHtml = '<tr><th>المعرف (_id)</th>';
+    for (const k of keys) {
+      headerHtml += `<th>${k}</th>`;
+    }
+    headerHtml += '<th>إجراءات</th></tr>';
+    thead.innerHTML = headerHtml;
+
+    let bodyHtml = '';
+    for (const d of docs) {
+      const id = d._id || '';
+      bodyHtml += `<tr onclick="openEditModal('${id}')" style="cursor:pointer;" title="اضغط لفتح وتعديل الوثيقة بالكامل">`;
+      bodyHtml += `<td><span class="badge-id">${id}</span></td>`;
+      for (const k of keys) {
+        let val = d[k] ?? '';
+        if (typeof val === 'string' && val.length > 40) val = val.substring(0, 40) + '...';
+        bodyHtml += `<td>${val}</td>`;
+      }
+      bodyHtml += `
+        <td>
+          <div style="display:flex; gap:6px;">
+            <button class="btn" style="padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); openEditModal('${id}')">✏️ تعديل</button>
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); deleteDoc('${id}')">🗑️ حذف</button>
+          </div>
+        </td>
+      `;
+      bodyHtml += `</tr>`;
+    }
+    tbody.innerHTML = bodyHtml;
+  }
+}
+
+function renderJsonView(docs) {
+  const wrap = document.getElementById('jsonViewWrap');
+  if (docs.length === 0) {
+    wrap.innerHTML = '<div style="text-align:center; padding:30px; color:var(--muted);">لا توجد وثائق.</div>';
+    return;
+  }
+
+  let html = '';
+  for (const d of docs) {
+    const id = d._id || '';
+    const jsonStr = JSON.stringify(d, null, 2);
+    html += `
+      <div class="doc-card">
+        <div class="doc-card-header">
+          <span class="badge-id">_id: ${id}</span>
+          <div style="display:flex; gap:6px;">
+            <button class="btn" style="padding:3px 8px; font-size:0.75rem;" onclick="copyDocJson('${id}')">📋 نسخ JSON</button>
+            <button class="btn" style="padding:3px 8px; font-size:0.75rem;" onclick="openEditModal('${id}')">✏️ تعديل</button>
+            <button class="btn btn-danger" style="padding:3px 8px; font-size:0.75rem;" onclick="deleteDoc('${id}')">🗑️ حذف</button>
+          </div>
+        </div>
+        <pre class="doc-card-body" id="doc-pre-${id}">${escapeHtml(jsonStr)}</pre>
+      </div>
+    `;
+  }
+  wrap.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function copyDocJson(id) {
+  const doc = currentDocs.find(d => d._id === id);
+  if (doc) {
+    navigator.clipboard.writeText(JSON.stringify(doc, null, 2));
+    showToast('تم نسخ مستند JSON للحافظة بنجاح!');
+  }
+}
+
+function openInsertModal() {
+  document.getElementById('modalCollName').textContent = currentCollection;
+  const sample = currentDocs[0] ? { ...currentDocs[0] } : { key: "value", created_at: new Date().toISOString() };
+  delete sample._id;
+  document.getElementById('insertJsonArea').value = JSON.stringify(sample, null, 2);
+  document.getElementById('insertModal').classList.add('active');
+}
+
+function openEditModal(id) {
+  editTargetId = id;
+  const doc = currentDocs.find(d => d._id === id);
+  if (!doc) return;
+  document.getElementById('editDocIdBadge').textContent = id;
+  document.getElementById('editJsonArea').value = JSON.stringify(doc, null, 2);
+  document.getElementById('editModal').classList.add('active');
+}
+
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('active');
+}
+
+async function submitInsertDoc() {
+  const raw = document.getElementById('insertJsonArea').value;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    alert('صيغة JSON غير صحيحة، يرجى مراجعة الأقواس والفواصل!');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/db/doc/insert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: currentCollection, doc: parsed })
+    });
+    const result = await res.json();
+    if (result.ok) {
+      showToast('تمت إضافة الوثيقة إلى MongoDB بنجاح! ID: ' + result.inserted_id);
+      closeModal('insertModal');
+      fetchCollectionsAndData();
+    } else {
+      alert('خطأ أثناء الحفظ: ' + (result.error || 'Unknown'));
+    }
+  } catch (err) {
+    console.error('Insert error:', err);
+    // Add locally to view
+    parsed._id = "local_" + Math.random().toString(36).substring(2, 9);
+    currentDocs.unshift(parsed);
+    filteredDocs = [...currentDocs];
+    renderCurrentView();
+    closeModal('insertModal');
+    showToast('تم الحفظ في العرض المحلي بنجاح!');
+  }
+}
+
+async function submitUpdateDoc() {
+  if (!editTargetId) return;
+  const raw = document.getElementById('editJsonArea').value;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    alert('صيغة JSON غير صحيحة!');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/db/doc/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: currentCollection, id: editTargetId, doc: parsed })
+    });
+    const result = await res.json();
+    if (result.ok) {
+      showToast('تم تحديث الوثيقة في MongoDB بنجاح!');
+      closeModal('editModal');
+      fetchCollectionsAndData();
+    } else {
+      alert('خطأ أثناء التحديث: ' + (result.error || 'Unknown'));
+    }
+  } catch (err) {
+    console.error('Update error:', err);
+    // Update locally
+    const idx = currentDocs.findIndex(d => d._id === editTargetId);
+    if (idx !== -1) {
+      currentDocs[idx] = parsed;
+      filteredDocs = [...currentDocs];
+      renderCurrentView();
+    }
+    closeModal('editModal');
+    showToast('تم تحديث العرض المحلي بنجاح!');
+  }
+}
+
+async function deleteDoc(id) {
+  if (!confirm(`هل أنت متأكد من حذف هذه الوثيقة نهائياً (${id})؟`)) return;
+
+  try {
+    const res = await fetch('/api/db/doc/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collection: currentCollection, id: id })
+    });
+    const result = await res.json();
+    if (result.ok) {
+      showToast('تم حذف الوثيقة بنجاح من MongoDB');
+      fetchCollectionsAndData();
+    } else {
+      alert('فشل الحذف: ' + (result.error || 'Unknown'));
+    }
+  } catch (err) {
+    console.error('Delete error:', err);
+    currentDocs = currentDocs.filter(d => d._id !== id);
+    filteredDocs = filteredDocs.filter(d => d._id !== id);
+    renderCurrentView();
+    showToast('تم الحذف من العرض المحلي');
+  }
+}
+
+function exportCurrentCollectionJson() {
+  window.open(`/api/db/export?coll=${currentCollection}`, '_blank');
+}
+
+let currentDbLang = localStorage.getItem('tradesejon_lang') || 'ar';
+function setDbLanguage(lang) {
+  currentDbLang = lang;
+  localStorage.setItem('tradesejon_lang', lang);
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const btnAr = document.getElementById('dbLangAr');
+  const btnEn = document.getElementById('dbLangEn');
+  if (btnAr && btnEn) {
+    if (lang === 'ar') {
+      btnAr.style.background = 'rgba(245,158,11,0.25)'; btnAr.style.color = '#f59e0b';
+      btnEn.style.background = 'transparent'; btnEn.style.color = '#94a3b8';
+    } else {
+      btnEn.style.background = 'rgba(56,189,248,0.25)'; btnEn.style.color = '#38bdf8';
+      btnAr.style.background = 'transparent'; btnAr.style.color = '#94a3b8';
+    }
+  }
+  const h1 = document.querySelector('.logo-text h1');
+  if (h1) h1.textContent = lang === 'en' ? 'Tradesejon AIOS | Mongo Database Explorer' : 'Tradesejon AIOS | مستكشف قاعدة بيانات Mongo';
+  const bBack = document.getElementById('dbBtnBack'); if (bBack) bBack.textContent = lang === 'en' ? '🚀 Main AIOS Dashboard' : '🚀 منصة AIOS الكاملة';
+  const bLocal = document.getElementById('dbBtnLocal'); if (bLocal) bLocal.textContent = lang === 'en' ? '⚡ Local Mongo Express (8081)' : '⚡ Mongo Express المحلي (8081)';
+  const bExp = document.getElementById('dbBtnExportZip'); if (bExp) bExp.textContent = lang === 'en' ? '📥 Download Full DB (.ZIP)' : '📥 تحميل النسخة الكاملة (.ZIP)';
+  const bN8n = document.getElementById('dbBtnN8nZip'); if (bN8n) bN8n.textContent = lang === 'en' ? '⚡ Download n8n Workflows (.ZIP)' : '⚡ تحميل حزمة n8n Workflows (.ZIP)';
+  const bRem = document.getElementById('dbBtnRemoteZip'); if (bRem) bRem.textContent = lang === 'en' ? '☁️ Remote Agent Bundle (.ZIP)' : '☁️ حزمة Remote Agent (.ZIP)';
+  const bRef = document.getElementById('dbBtnRefresh'); if (bRef) bRef.textContent = lang === 'en' ? '🔄 Refresh' : '🔄 تحديث';
+  const bTbl = document.getElementById('btnViewTable'); if (bTbl) bTbl.textContent = lang === 'en' ? 'Table View' : 'جدول منظم';
+  const bJsn = document.getElementById('btnViewJson'); if (bJsn) bJsn.textContent = lang === 'en' ? 'JSON View' : 'مستندات JSON';
+  const sInp = document.getElementById('searchInput'); if (sInp) sInp.placeholder = lang === 'en' ? 'Instant search across documents (Name, Number, Email, Message)...' : 'بحث فوري في المستندات (بالاسم، الإيميل، الرسالة، المعرف)...';
+  const statLbls = document.querySelectorAll('.stat-box .stat-lbl');
+  if (statLbls.length >= 4) {
+    statLbls[0].textContent = lang === 'en' ? 'Active Collection' : 'المجموعة الحالية';
+    statLbls[1].textContent = lang === 'en' ? 'Collection Documents' : 'إجمالي الوثائق';
+    statLbls[2].textContent = lang === 'en' ? 'Total Database Size' : 'إجمالي قاعدة البيانات';
+    statLbls[3].textContent = lang === 'en' ? 'Storage Engine' : 'الحجم والذاكرة';
+  }
+  const connTxt = document.getElementById('connStatusText');
+  if (connTxt) connTxt.textContent = lang === 'en' ? '● Live MongoDB Connected & Synced' : '● قاعدة البيانات متصلة ومحدثة لحظياً';
+  const prevB = document.getElementById('btnPrevPage'); if (prevB) prevB.innerHTML = lang === 'en' ? '&larr; Previous' : '&rarr; السابق';
+  const nextB = document.getElementById('btnNextPage'); if (nextB) nextB.innerHTML = lang === 'en' ? 'Next &rarr;' : 'التالي &larr;';
+  if (typeof collectionsList !== 'undefined' && collectionsList.length > 0) renderSidebarCollections(collectionsList);
+  if (typeof renderCurrentView === 'function') renderCurrentView();
+}
+window.addEventListener('DOMContentLoaded', () => {
+  if (currentDbLang !== 'ar') setDbLanguage(currentDbLang);
+});
+</script>
+
+
+<script src="/thinking-orbs-3d.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const cDb = document.getElementById('dbOrbCanvas');
+  if (cDb && window.TradesejonThinkingOrb) {
+    new window.TradesejonThinkingOrb(cDb, { state: 'searching', size: 38, theme: 'dark', color: '#10b981' });
+  }
+  if (window.initTradesejon3D) window.initTradesejon3D();
+});
+</script>
+
+</body>
+</html>

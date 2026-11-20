@@ -1,0 +1,59 @@
+{
+  "id": "tradesejon-wf-02-pr-agent",
+  "name": "02_Tradesejon_PR_Community_AI_Agent_17FAQs",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-pr",
+        "responseMode": "lastNode"
+      },
+      "id": "pr-wh",
+      "name": "PR Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst text = String(body.message?.text || body.query || '').trim();\nconst chatId = String(body.message?.chat?.id || body.chat_id || '');\nconst prToken = $env.TELEGRAM_PR_BOT_TOKEN || '';\nconst groqKey = $env.GROQ_API_KEY || '';\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nasync function sendPrReply(msg) {\n  if (chatId && prToken) {\n    await fetch(`https://api.telegram.org/bot${prToken}/sendMessage`, {\n      method: 'POST', headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'HTML' })\n    }).catch(() => null);\n  }\n}\n\nconst BRAND = $env.BRAND_NAME || \"Tradesejon\";\nconst MENTORS = $env.MENTORS_LIST || \"Senior Lead Strategist, Mentor Alpha, Mentor Beta, Mentor Gamma, Mentor Delta\";\nconst PLATFORMS = $env.SUPPORTED_PLATFORMS || \"Webull, Interactive Brokers (IBKR), TradingView\";\nconst FAQS = [\n  { q: \"مبتدئ في التداول / الفيديوهات\", a: `في ${BRAND} بنبدأ معاك من الصفر بخطة تدريبية منظمة وتطبيق عملي لايف عشان تتقن استراتيجية الـ Hyper-Scalping خطوة بخطوة.` },\n  { q: \"ايه المتطلبات عشان ابدأ؟\", a: \"لابتوب أو كمبيوتر، إنترنت مستقر، والتفرغ لحضور الجلسات اللايف المباشرة.\" },\n  { q: \"رأس المال المطلوب للبدء؟\", a: \"تقدر تبدأ بمرونة من $100 إلى $500 مع إدارة صارمة لرأس المال (WIN BIG, win small, lose small).\" },\n  { q: \"منصات وبرامج التداول المعتمدة؟\", a: `ندعم رسمياً منصات: ${PLATFORMS}.` },\n  { q: \"أوقات الجلسات اليومية المباشرة؟\", a: $env.LIVE_SESSION_SCHEDULE || \"يومياً من الإثنين للجمعة الساعة 9:30 مساءً عبر Discord VIP و Zoom.\" },\n  { q: \"أسعار ورشة التداول الأوفلاين؟\", a: `${$env.WORKSHOP_MEMBER_PRICE || '4,000'} جنيه ($74.39) للأعضاء، و ${$env.WORKSHOP_NONMEMBER_PRICE || '6,000'} جنيه ($111.59) لغير المشتركين.` },\n  { q: \"اشتراك مجتمع وسكانر الديسكورد؟\", a: `$${$env.VIP_MONTHLY_USD || '45'} شهرياً عبر Whop شاملة قنوات الـ VIP وسكانر الصفقات اللحظي.` },\n  { q: \"جلسة المتابعة الخاصة 4 ساعات؟\", a: `جلسة Online 1-on-1 لمدة 4 ساعات بقيمة $${$env.PRIVATE_SESSION_USD || '100'} شاملة مراجعة المحفظة والتطبيق المباشر.` },\n  { q: \"من هم الموجهين والمدربين؟\", a: `فريق التوجيه المعتمد في ${BRAND}: ${MENTORS}.` },\n  { q: \"طريقة وأسلوب التداول؟\", a: \"استراتيجية الـ Hyper-Scalping بمبدأ WIN BIG, win small, lose small.\" },\n  { q: \"هل يوجد توصيات شراء وبيع مباشرة؟\", a: \"بنوفرلك تحليلات لايف ومناطق دخول احترافية وسكانر لحظي مع تدريبك على القرار المستقل.\" },\n  { q: \"كيفية تجديد الاشتراك أو الترقية؟\", a: \"عبر بوابة الدفع الرسمية Whop بشكل تلقائي بالكامل وبمرونة الإلغاء بأي وقت.\" },\n  { q: \"هل الديسكورد متصل بالتيليجرام؟\", a: `نعم، منظومة ${BRAND} Omnichannel تربط الديسكورد والتيليجرام بشكل لحظي متزامن.` },\n  { q: \"ماذا أفعل لو واجهت مشكلة في الدفع؟\", a: \"تواصل مع بوت الدعم الفني أو افتح تذكرة في روم #pr-desk في الديسكورد.\" },\n  { q: \"هل متوفر شهادة بعد الورشة؟\", a: `نعم، يحصل الخريج على شهادة إتمام البرنامج التدريبي المعتمد من ${BRAND}.` },\n  { q: \"هل التداول مناسب للموظفين؟\", a: \"نعم، جلساتنا المسائية الساعة 9:30 مساءً بتوقيت القاهرة تناسب جدول العمل اليومي.\" },\n  { q: \"كيف أحصل على رابط الجلسة المباشرة؟\", a: \"يرسل الرابط المشفر تلقائياً عبر البوت قبل بدء الجلسة بـ 15 دقيقة.\" }\n];\nfor (const f of FAQS) {\n  if (text.includes(f.q) || f.q.split(' ').filter(w => w.length > 3).filter(w => text.includes(w)).length >= 2) {\n    await sendPrReply(f.a);\n    return [{ json: { ok: true, faq_matched: true, reply: f.a } }];\n  }\n}\n\nif (/(?:indicator|script|scanner|سكانر|مؤشر|توصية)/i.test(text)) {\n  const guardMsg = `🔒 <b>${brand} PR Desk:</b>\\nVIP Indicators and Scanners are available to active members.\\nSubscribe via Whop: ${$env.WHOP_CHECKOUT_URL || 'Configure WHOP_CHECKOUT_URL'}`;\n  await sendPrReply(guardMsg);\n  return [{ json: { ok: true, guarded: true, reply: guardMsg } }];\n}\n\nlet reply = `Welcome to ${brand} Public Relations Desk! Ask about membership pricing, live sessions, or workshops.`;\nif (groqKey && text) {\n  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: `You are ${brand} PR Representative. Answer strictly based on configured pricing and platforms (${PLATFORMS}). Never invent unverified links.` },\n        { role: 'user', content: text }\n      ]\n    })\n  }).then(res => res.json()).catch(() => ({}));\n  if (r.choices?.[0]?.message?.content) reply = r.choices[0].message.content;\n}\n\nawait sendPrReply(reply);\nreturn [{ json: { ok: true, reply } }];"
+      },
+      "id": "pr-engine",
+      "name": "17-FAQs & Prospect Guard Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "PR Webhook": {
+      "main": [
+        [
+          {
+            "node": "17-FAQs & Prospect Guard Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "pr",
+    "white-label"
+  ]
+}

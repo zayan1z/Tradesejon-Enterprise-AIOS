@@ -1,0 +1,59 @@
+{
+  "id": "tradesejon-wf-04-omnichannel-router",
+  "name": "04_Tradesejon_Omnichannel_CrossPlatform_Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-dispatch",
+        "responseMode": "lastNode"
+      },
+      "id": "rt-wh",
+      "name": "Dispatch Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst platform = String(b.platform || 'discord').toLowerCase();\nconst target = String(b.target || '');\nconst message = String(b.message || '');\nconst brand = $env.BRAND_NAME || 'Tradesejon';\nif (!target || !message) return [{ json: { ok: false, delivered: false, error: 'Missing target or message payload' } }];\n\nif (platform === 'discord') {\n  const token = $env.DISCORD_BOT_TOKEN;\n  if (!token) return [{ json: { ok: false, delivered: false, error: 'DISCORD_BOT_TOKEN not configured' } }];\n  const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {\n    method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ recipient_id: target })\n  });\n  const dmData = await dmRes.json();\n  if (!dmRes.ok || !dmData.id) return [{ json: { ok: false, delivered: false, error: 'Discord DM open failed', details: dmData } }];\n  const msgRes = await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {\n    method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ content: message })\n  });\n  const msgData = await msgRes.json();\n  if (!msgRes.ok || !msgData.id) return [{ json: { ok: false, delivered: false, error: 'Discord rejected delivery', details: msgData } }];\n  return [{ json: { ok: true, delivered: true, platform: 'discord', messageId: msgData.id } }];\n}\n\nif (platform === 'telegram') {\n  const token = $env.TELEGRAM_CEO_BOT_TOKEN;\n  if (!token) return [{ json: { ok: false, delivered: false, error: 'TELEGRAM_CEO_BOT_TOKEN not configured' } }];\n  const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: target, text: message, parse_mode: 'HTML' })\n  });\n  const tgData = await tgRes.json();\n  if (!tgData.ok) return [{ json: { ok: false, delivered: false, error: 'Telegram rejected delivery', details: tgData } }];\n  return [{ json: { ok: true, delivered: true, platform: 'telegram', messageId: tgData.result.message_id } }];\n}\n\nif (platform === 'email') {\n  const resendKey = $env.RESEND_API_KEY;\n  if (!resendKey) return [{ json: { ok: false, delivered: false, error: 'RESEND_API_KEY not configured' } }];\n  const emRes = await fetch('https://api.resend.com/emails', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      from: $env.RESEND_FROM_EMAIL || 'vip@yourdomain.com',\n      to: [target],\n      subject: String(b.subject || `${brand} Executive Update`),\n      html: `<p>${message.replace(/\\n/g, '<br>')}</p>`\n    })\n  });\n  const emData = await emRes.json();\n  if (!emRes.ok || !emData.id) return [{ json: { ok: false, delivered: false, error: 'Email API rejected delivery', details: emData } }];\n  return [{ json: { ok: true, delivered: true, platform: 'email', messageId: emData.id } }];\n}\n\nreturn [{ json: { ok: false, delivered: false, error: `Unsupported platform: ${platform}` } }];"
+      },
+      "id": "rt-exec",
+      "name": "Verified Multi-Channel Dispatcher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Dispatch Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verified Multi-Channel Dispatcher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "omnichannel",
+    "verified-delivery"
+  ]
+}

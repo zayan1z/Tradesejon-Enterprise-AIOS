@@ -1,0 +1,55 @@
+{
+  "id": "tradesejon-wf-20-oneclick-provisioner",
+  "name": "20_Tradesejon_OneClick_Telegram_And_Discord_Provisioner",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "prov-manual",
+      "name": "Click Execute to Provision All Systems",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const baseUrl = String($env.WEBHOOK_URL || '').replace(/\\/$/, '');\nconst summary = { telegram: [], discord: null, mongodb: null, white_label_brand: $env.BRAND_NAME || 'Tradesejon' };\n\nfor (const [label, tok, path] of [\n  ['CEO_BOT', $env.TELEGRAM_CEO_BOT_TOKEN, 'tradesejon-ceo'],\n  ['PR_BOT', $env.TELEGRAM_PR_BOT_TOKEN, 'tradesejon-pr'],\n  ['TRADER_BOT', $env.TELEGRAM_TRADER_BOT_TOKEN, 'tradesejon-trader']\n]) {\n  if (!tok || !baseUrl) { summary.telegram.push({ bot: label, ok: false, error: 'Missing token or WEBHOOK_URL' }); continue; }\n  try {\n    const res = await fetch(`https://api.telegram.org/bot${tok}/setWebhook?url=${encodeURIComponent(baseUrl + '/webhook/' + path)}`).then(r => r.json());\n    summary.telegram.push({ bot: label, ok: res.ok, description: res.description });\n  } catch (e) { summary.telegram.push({ bot: label, ok: false, error: e.message }); }\n}\n\nif ($env.DISCORD_BOT_TOKEN) {\n  try {\n    const dc = await fetch('https://discord.com/api/v10/users/@me', { headers: { 'Authorization': `Bot ${$env.DISCORD_BOT_TOKEN}` } }).then(r => r.json());\n    summary.discord = { ok: Boolean(dc.id), bot_username: dc.username || null };\n  } catch (e) { summary.discord = { ok: false, error: e.message }; }\n}\n\nif ($env.MONGODB_URI) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const c = new MongoClient($env.MONGODB_URI);\n    await c.connect();\n    const db = c.db($env.MONGODB_DB || 'tradesejon_prod');\n    await db.collection('leads').createIndex({ email: 1 }, { unique: true, sparse: true });\n    await db.collection('members').createIndex({ discord_user_id: 1 }, { unique: true, sparse: true });\n    await db.collection('audit_logs').createIndex({ timestamp: -1 });\n    await c.close();\n    summary.mongodb = { ok: true, indexes_created: true };\n  } catch (e) { summary.mongodb = { ok: false, error: e.message }; }\n}\n\nreturn [{ json: { ok: true, provisioning: summary, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "prov-exec",
+      "name": "Auto-Bind Telegram, Discord & MongoDB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Click Execute to Provision All Systems": {
+      "main": [
+        [
+          {
+            "node": "Auto-Bind Telegram, Discord & MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "setup",
+    "one-click"
+  ]
+}

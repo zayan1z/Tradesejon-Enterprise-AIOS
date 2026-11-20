@@ -1,0 +1,176 @@
+{
+  "id": "tradesejon-wf-16",
+  "name": "16_Tradesejon_Zoom_And_Live_Session_Gateway",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-13",
+      "name": "Zoom Live Gateway Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-zoom-gateway",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "auth-13",
+      "name": "Zero-Trust Header Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+      }
+    },
+    {
+      "id": "if-13",
+      "name": "If Authorized",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        560,
+        260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-13-cond",
+              "leftValue": "={{ $json.authorized }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "inv-13",
+      "name": "Issue 1-Time 15m Live Invite",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        180
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_LIVE_VOICE_CHANNEL_ID }}/invites",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ max_age: 900, max_uses: 1, temporary: true, unique: true }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "resp-13",
+      "name": "Respond Live Invite",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.authorized === false ? $json : { ok: true, invite_code: $json.code || null, ttl_seconds: 900, max_uses: 1 }) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Zoom Live Gateway Webhook": {
+      "main": [
+        [
+          {
+            "node": "Zero-Trust Header Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zero-Trust Header Auth": {
+      "main": [
+        [
+          {
+            "node": "If Authorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Authorized": {
+      "main": [
+        [
+          {
+            "node": "Issue 1-Time 15m Live Invite",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Live Invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Issue 1-Time 15m Live Invite": {
+      "main": [
+        [
+          {
+            "node": "Respond Live Invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

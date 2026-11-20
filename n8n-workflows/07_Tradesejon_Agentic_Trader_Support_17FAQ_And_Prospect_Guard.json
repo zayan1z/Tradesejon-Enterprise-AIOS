@@ -1,0 +1,156 @@
+{
+  "id": "tradesejon-wf-07",
+  "name": "07_Tradesejon_Agentic_Trader_Support_17FAQ_And_Prospect_Guard",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-03",
+      "name": "Trader Agent Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-trader-agent",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "auth-03",
+      "name": "Zero-Trust Header Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+      }
+    },
+    {
+      "id": "if-03",
+      "name": "If Authorized",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        560,
+        260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "if-03-cond",
+              "leftValue": "={{ $json.authorized }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "guard-03",
+      "name": "Prospect Valuable File Guard",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        180
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\nconst q = String(b.question || '').trim();\nconst isPaid = Boolean(b.paid);\nconst blockedKw = ['blueprint','masterclass','business model canvas','marketing plan','visual identity','1omga0wt','1c7gz7rw','المخطط الاستراتيجي','دليل الماستركلاس','خطة التسويق','الهوية البصرية','مجلد المستندات'];\nif (!isPaid && blockedKw.some((k) => q.toLowerCase().includes(k))) {\n  return [{ json: { ok: true, blocked: true, reply: '🔒 الملفات والمستندات الخاصة والمدفوعة متاحة فقط للمشتركين بعد تأكيد الاشتراك والدفع عبر Whop.' } }];\n}\nreturn [{ json: { ok: true, blocked: false, question: q, user_id: String(b.discord_user_id || ''), isPaid } }];"
+      }
+    },
+    {
+      "id": "resp-03",
+      "name": "Respond Safe Reply",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1020,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Trader Agent Webhook": {
+      "main": [
+        [
+          {
+            "node": "Zero-Trust Header Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zero-Trust Header Auth": {
+      "main": [
+        [
+          {
+            "node": "If Authorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Authorized": {
+      "main": [
+        [
+          {
+            "node": "Prospect Valuable File Guard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Safe Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prospect Valuable File Guard": {
+      "main": [
+        [
+          {
+            "node": "Respond Safe Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

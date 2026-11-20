@@ -1,0 +1,56 @@
+{
+  "id": "tradesejon-wf-10",
+  "name": "10_Tradesejon_Google_Sheets_Master_Auto_Sync_Forever",
+  "active": true,
+  "nodes": [
+    {
+      "id": "cron-06",
+      "name": "Every 5 Minutes Sync",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "pull-06",
+      "name": "Pull MongoDB Atlas CRM Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const { MongoClient } = require('mongodb');\nconst uri = $env.MONGODB_URI;\nif (!uri) throw new Error('MONGODB_URI is not set');\nconst client = new MongoClient(uri);\nawait client.connect();\nconst rows = [];\ntry {\n  const db = client.db($env.MONGODB_DB || 'automation_hub');\n  const docs = await db.collection('trading_leads').find({}).sort({ updated_at: -1 }).limit(500).toArray();\n  for (const d of docs) {\n    rows.push({\n      updated_at: d.updated_at ? new Date(d.updated_at).toISOString() : '',\n      discord_user_id: String(d.discord_user_id || ''),\n      discord_username: String(d.discord_username || ''),\n      full_name: String(d.full_name || ''),\n      email: String(d.email || ''),\n      phone: String(d.phone_e164 || d.phone || ''),\n      tier: String(d.tier || ''),\n      status: String(d.status || ''),\n      in_community: String(Boolean(d.in_community)),\n      plan_id: String(d.plan_id || ''),\n      amount_usd: Number(d.amount_usd || 0),\n      roles: Array.isArray(d.roles) ? d.roles.join(',') : '',\n      whop_payment_id: String(d.whop_payment_id || ''),\n      source: String(d.source || 'vps_n8n'),\n      live_link: String(d.discord_live_url || d.unique_zoom_url || ''),\n      notes: String(d.country || '') + ' | ' + String(d.trading_level || '')\n    });\n  }\n} finally {\n  await client.close();\n}\nreturn [{ json: { ok: true, gsheet_id: 'YOUR_GOOGLE_ID', row_count: rows.length, rows } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes Sync": {
+      "main": [
+        [
+          {
+            "node": "Pull MongoDB Atlas CRM Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "white_label_brand": "Configurable via $env.BRAND_NAME",
+  "discord_vip_scanner_monthly_usd": 45,
+  "offline_workshop_member_egp": 4000,
+  "offline_workshop_member_usd": 74.39,
+  "offline_workshop_non_member_egp": 6000,
+  "offline_workshop_non_member_usd": 111.59,
+  "private_session_4hr_usd": 100,
+  "mentors": [
+    "Lead Strategist",
+    "Mentor Alpha",
+    "Mentor Beta",
+    "Mentor Gamma",
+    "Mentor Delta"
+  ],
+  "platforms": [
+    "Webull",
+    "Interactive Brokers (IBKR)",
+    "TradingView"
+  ]
+}

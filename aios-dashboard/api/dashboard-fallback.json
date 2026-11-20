@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "brand": "Tradesejon",
+  "metrics": {
+    "total_leads": 0,
+    "active_members": 0,
+    "pending_approvals": 0,
+    "workshop_seats_total": 20,
+    "workshop_seats_remaining": 20
+  },
+  "session": {
+    "schedule": "Monday - Friday, 21:30 Local Time",
+    "platform": "Discord VIP & Live Gateway"
+  },
+  "sample_leads": []
+}

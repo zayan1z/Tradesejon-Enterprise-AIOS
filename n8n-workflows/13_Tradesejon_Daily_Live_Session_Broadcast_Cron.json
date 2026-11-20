@@ -1,0 +1,120 @@
+{
+  "id": "tradesejon-wf-13",
+  "name": "13_Tradesejon_Daily_Live_Session_Broadcast_Cron",
+  "active": true,
+  "nodes": [
+    {
+      "id": "cron-09",
+      "name": "Daily Live Session Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * 1-5"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "inv-09",
+      "name": "Create 1-Time 15m Discord Live Invite",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_LIVE_VOICE_CHANNEL_ID }}/invites",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ max_age: 900, max_uses: 1, temporary: true, unique: true }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    },
+    {
+      "id": "msg-09",
+      "name": "Post Live Broadcast Announcement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_ANNOUNCEMENT_CHANNEL_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ content: '🔴 Live Trading Session Starting — 1-time 15-min link: https://discord.gg/' + ($json.code || '') }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Live Session Schedule": {
+      "main": [
+        [
+          {
+            "node": "Create 1-Time 15m Discord Live Invite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create 1-Time 15m Discord Live Invite": {
+      "main": [
+        [
+          {
+            "node": "Post Live Broadcast Announcement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

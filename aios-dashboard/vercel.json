@@ -1,0 +1,79 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/telegram",
+      "destination": "/api/telegram.js"
+    },
+    {
+      "source": "/api/zoom-join",
+      "destination": "/api/zoom-join.js"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/db",
+      "destination": "/db.html"
+    },
+    {
+      "source": "/database",
+      "destination": "/db.html"
+    },
+    {
+      "source": "/mongo",
+      "destination": "/db.html"
+    },
+    {
+      "source": "/aios.html",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/form",
+      "destination": "/form.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)\\.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "dashboard-fallback.json",
+      "maxDuration": 30
+    },
+    "api/telegram.js": {
+      "includeFiles": "dashboard-fallback.json",
+      "maxDuration": 30
+    }
+  }
+}

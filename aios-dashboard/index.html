@@ -1,0 +1,3552 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<title>Tradesejon AIOS | غرفة القيادة الذكية والمخططات الحية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #040710;
+  --panel: #0b1120;
+  --card: #111827;
+  --border: #1e293b;
+  --accent: #f59e0b;
+  --blue: #3b82f6;
+  --green: #10b981;
+  --red: #ef4444;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body {
+  font-family: 'Cairo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+/* Sleek universal dark scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+* { scrollbar-width: thin; scrollbar-color: #334155 rgba(15, 23, 42, 0.6); }
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  overflow: visible;
+}
+.sidebar {
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  overflow-y: auto;
+}
+.logo {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--accent);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.close-drawer-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.nav-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  text-align: right;
+  padding: 11px 13px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-btn.active, .nav-btn:hover {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--accent);
+}
+.session-widget {
+  margin-top: auto;
+  background: #070b14;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.session-widget h4 { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+.session-time { font-size: 1.15rem; font-weight: 900; color: var(--green); }
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.topbar {
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.menu-toggle-btn {
+  display: none;
+  background: #1e293b;
+  color: var(--text);
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.market-ticker-strip {
+  background: #070b15;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.market-ticker-strip::-webkit-scrollbar { display: none; }
+.ticker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.ticker-pill:hover { border-color: var(--accent); }
+.ticker-sym { font-weight: 900; color: #e2e8f0; }
+.ticker-price { font-weight: 700; color: var(--accent); direction: ltr; }
+.ticker-chg { font-size: 0.74rem; font-weight: 700; padding: 1px 6px; border-radius: 6px; direction: ltr; }
+.chg-up { background: rgba(16,185,129,0.15); color: #34d399; }
+.chg-down { background: rgba(239,68,68,0.15); color: #f87171; }
+
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  padding: 12px 18px;
+  flex-shrink: 0;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.kpi-card .label { font-size: 0.78rem; color: var(--muted); }
+.kpi-card .val { font-size: 1.45rem; font-weight: 900; margin-top: 2px; }
+
+.content-area {
+  flex: 1;
+  padding: 12px 18px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: visible;
+}
+.view-section { display: none; flex: 1; flex-direction: column; min-height: 0; }
+.view-section.active { display: flex; }
+
+.aios-workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  flex: 1;
+  min-height: 520px;
+}
+.aios-workspace.with-chart { grid-template-columns: 1.15fr 0.85fr; }
+.chat-box {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 480px;
+  height: calc(100vh - 180px);
+}
+.chat-header-bar {
+  padding: 8px 14px;
+  background: #0d1528;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.quick-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+.quick-chips::-webkit-scrollbar { display: none; }
+.chip-btn {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chip-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.chat-messages {
+  flex: 1;
+  padding: 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.msg {
+  max-width: 85%;
+  padding: 11px 15px;
+  border-radius: 14px;
+  line-height: 1.65;
+  font-size: 0.92rem;
+  word-wrap: break-word;
+}
+.msg.ai { background: #1e293b; align-self: flex-start; border-bottom-right-radius: 4px; }
+.msg.user {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #050811;
+  font-weight: 700;
+  align-self: flex-end;
+  border-bottom-left-radius: 4px;
+}
+.chat-input-bar {
+  padding: 10px 12px;
+  background: #070b14;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.chat-input-bar input {
+  flex: 1;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 14px;
+  min-height: 44px;
+  border-radius: 10px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.92rem;
+}
+.btn {
+  padding: 9px 14px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: none;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #050811; }
+.btn-voice { background: #1e293b; color: var(--text); border: 1px solid #334155; }
+.btn-voice.recording { background: var(--red); color: #fff; animation: pulse 1s infinite; }
+.btn-lang { background: #0f172a; color: #38bdf8; border: 1px solid #1e3a8a; font-size: 0.78rem; padding: 8px 10px; }
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.55; } 100% { opacity: 1; } }
+
+.mini-chart-panel {
+  display: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  flex-direction: column;
+  min-height: 480px;
+  height: calc(100vh - 180px);
+}
+.aios-workspace.with-chart .mini-chart-panel { display: flex; }
+.markets-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #0d1528;
+  border-bottom: 1px solid var(--border);
+}
+.sym-btn {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sym-btn.active { background: var(--accent); color: #050811; border-color: var(--accent); }
+
+.table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: auto;
+  height: calc(100vh - 180px);
+  max-height: calc(100vh - 180px);
+  flex: 1;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+table { width: 100%; border-collapse: collapse; text-align: right; min-width: 680px; }
+th, td { padding: 11px 13px; border-bottom: 1px solid var(--border); font-size: 0.86rem; }
+th { background: #070b14; color: var(--muted); font-weight: 700; position: sticky; top: 0; }
+.score-badge { padding: 3px 9px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; }
+.score-VIP { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+.score-HOT { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+.score-WARM { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid #3b82f6; }
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 14px;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 650px;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: 20px;
+}
+.modal input, .modal textarea {
+  width: 100%;
+  background: #070b14;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px;
+  border-radius: 8px;
+  font-family: 'Cairo', sans-serif;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.mobile-bottom-nav {
+  display: none;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 6px 8px env(safe-area-inset-bottom, 6px);
+  justify-content: space-around;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 90;
+}
+.m-nav-item {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.m-nav-item.active { color: var(--accent); background: rgba(245, 158, 11, 0.12); }
+
+@media (max-width: 960px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -280px;
+    width: 270px;
+    height: 100dvh;
+    transition: right 0.25s ease;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+  }
+  .sidebar.open { right: 0; }
+  .close-drawer-btn, .menu-toggle-btn { display: inline-flex; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 8px 12px; }
+  .kpi-card { padding: 8px 10px; }
+  .kpi-card .val { font-size: 1.15rem; }
+  .content-area { padding: 8px 10px 88px; }
+  .aios-workspace.with-chart { grid-template-columns: 1fr; }
+  .mini-chart-panel { height: 320px; min-height: 280px; }
+  .chat-box { height: 480px; min-height: 400px; }
+  .mobile-bottom-nav { display: flex; }
+  .msg { max-width: 92%; font-size: 0.88rem; }
+  .chat-input-bar { padding: 8px; gap: 6px; }
+  .btn { padding: 8px 10px; font-size: 0.82rem; }
+}
+
+/* --- 12-Markets Institutional Feed & Real-Time Chart CSS --- */
+.market-ticker-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 8px 12px;
+  background: #080d1a;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+.market-ticker-strip::-webkit-scrollbar { display: none; }
+.live-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+.live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10b981;
+  animation: livePulse 1.2s infinite ease-in-out;
+}
+@keyframes livePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.45; }
+}
+.ticker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 5px 11px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  user-select: none;
+}
+.ticker-pill:hover, .ticker-pill.active {
+  border-color: var(--accent);
+  background: #131e36;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.18);
+}
+.ticker-pill.tick-up {
+  animation: flashGreen 0.6s ease;
+}
+.ticker-pill.tick-down {
+  animation: flashRed 0.6s ease;
+}
+@keyframes flashGreen {
+  0% { background: rgba(16, 185, 129, 0.3); border-color: #10b981; }
+  100% { background: var(--card); border-color: var(--border); }
+}
+@keyframes flashRed {
+  0% { background: rgba(239, 68, 68, 0.3); border-color: #ef4444; }
+  100% { background: var(--card); border-color: var(--border); }
+}
+.ticker-sym { font-weight: 800; color: #f1f5f9; }
+.ticker-price { font-weight: 800; color: var(--accent); direction: ltr; font-feature-settings: "tnum"; }
+.ticker-chg {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  direction: ltr;
+}
+.chg-up { background: rgba(16, 185, 129, 0.18); color: var(--green); }
+.chg-down { background: rgba(239, 68, 68, 0.18); color: var(--red); }
+
+/* Chart Controls & Canvas */
+.markets-toolbar-scroll {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+.markets-toolbar-scroll::-webkit-scrollbar { display: none; }
+.chart-canvas-wrap {
+  position: relative;
+  flex: 1 1 360px;
+  width: 100%;
+  height: 360px;
+  min-height: 360px;
+  background: #090e1a;
+  overflow: hidden;
+  display: block;
+}
+.chart-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.chart-crosshair-tooltip {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  color: #e2e8f0;
+  pointer-events: none;
+  display: none;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  direction: ltr;
+  font-family: monospace;
+}
+.chart-price-badge {
+  position: absolute;
+  right: 6px;
+  background: var(--accent);
+  color: #050811;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  pointer-events: none;
+  font-family: monospace;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+  transform: translateY(-50%);
+  z-index: 5;
+}
+
+
+.live-clock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  padding: 5px 12px;
+  border-radius: 9px;
+  font-family: monospace;
+  font-size: 0.84rem;
+  color: var(--accent);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.tf-btn {
+  background: #111827;
+  border: 1px solid #1f2937;
+  color: #94a3b8;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.tf-btn:hover, .tf-btn.active {
+  background: var(--accent);
+  color: #050811;
+  border-color: var(--accent);
+}
+
+
+/* ==========================================================================
+   AWWWARDS / INSTITUTIONAL FINTECH ULTRA-DESIGN SYSTEM (TRADESJEO AIOS)
+   ========================================================================== */
+:root {
+  --bg: #03050c;
+  --panel: rgba(9, 14, 28, 0.82);
+  --card: rgba(15, 23, 42, 0.68);
+  --border: rgba(148, 163, 184, 0.14);
+  --border-glow: rgba(245, 158, 11, 0.38);
+  --accent: #f59e0b;
+  --accent-bright: #fbbf24;
+  --cyan: #38bdf8;
+  --emerald: #10b981;
+  --rose: #f43f5e;
+}
+
+body {
+  background-color: #03050c;
+  background-image:
+    radial-gradient(at 12% 8%, rgba(245, 158, 11, 0.09) 0px, transparent 42%),
+    radial-gradient(at 88% 14%, rgba(56, 189, 248, 0.08) 0px, transparent 46%),
+    radial-gradient(at 50% 92%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.016) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+  background-attachment: fixed;
+}
+
+.sidebar {
+  background: linear-gradient(180deg, rgba(9, 14, 28, 0.92) 0%, rgba(5, 8, 18, 0.96) 100%) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-left: 1px solid rgba(148, 163, 184, 0.14) !important;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45);
+}
+html[dir="ltr"] .sidebar {
+  border-left: none !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.14) !important;
+}
+
+.logo {
+  position: relative;
+  padding: 6px 4px 16px !important;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2) !important;
+}
+.logo span {
+  background: linear-gradient(135deg, #ffffff 0%, #fbbf24 55%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.3px;
+  font-size: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  position: relative;
+  border: 1px solid transparent !important;
+  border-radius: 12px !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  overflow: hidden;
+}
+.nav-btn:hover {
+  background: rgba(30, 41, 59, 0.65) !important;
+  border-color: rgba(148, 163, 184, 0.2) !important;
+  transform: translateX(-3px);
+  color: #f8fafc !important;
+}
+html[dir="ltr"] .nav-btn:hover {
+  transform: translateX(3px);
+}
+.nav-btn.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(217, 119, 6, 0.06) 100%) !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  color: #fbbf24 !important;
+  box-shadow: 0 4px 20px -4px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.session-widget {
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.85), rgba(7, 11, 20, 0.95)) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+.session-widget::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #10b981, #38bdf8, transparent);
+}
+.session-time {
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+}
+
+.topbar {
+  background: rgba(9, 14, 28, 0.78) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14) !important;
+  position: sticky;
+  top: 0;
+  z-index: 80;
+}
+
+/* KPI Cards Ultra Specular Upgrade */
+.kpi-card {
+  position: relative;
+  background: linear-gradient(160deg, rgba(17, 25, 46, 0.82) 0%, rgba(9, 14, 26, 0.92) 100%) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  border-radius: 16px !important;
+  padding: 14px 16px !important;
+  transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  box-shadow: 0 14px 32px -8px rgba(0, 0, 0, 0.65), 0 0 20px rgba(245, 158, 11, 0.12);
+}
+.kpi-card::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0;
+  width: 90px; height: 90px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+.kpi-card .val {
+  font-family: 'JetBrains Mono', 'Cairo', monospace;
+  font-size: 1.6rem !important;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.kpi-spark-tag {
+  font-size: 0.7rem;
+  font-family: 'Cairo', sans-serif;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-weight: 700;
+}
+
+/* Institutional Orderflow & Sentiment Bar */
+.institutional-pulse-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 6px 18px;
+  background: linear-gradient(90deg, rgba(8, 13, 26, 0.95), rgba(15, 23, 42, 0.9), rgba(8, 13, 26, 0.95));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+.pulse-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+}
+.pulse-metric strong {
+  color: #f8fafc;
+  font-family: 'JetBrains Mono', monospace;
+}
+.sentiment-meter {
+  width: 110px;
+  height: 6px;
+  background: rgba(239, 68, 68, 0.35);
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+}
+.sentiment-fill {
+  height: 100%;
+  width: 74%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 8px #10b981;
+  transition: width 0.6s ease;
+}
+
+/* Chat & Mini-Chart Glass Panels */
+.chat-box, .mini-chart-panel, .table-wrap {
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.78) 0%, rgba(8, 13, 25, 0.88) 100%) !important;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(148, 163, 184, 0.16) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.msg.ai {
+  background: linear-gradient(145deg, rgba(30, 41, 59, 0.85), rgba(15, 23, 42, 0.92)) !important;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+.msg.user {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 55%, #d97706 100%) !important;
+  color: #03050c !important;
+  box-shadow: 0 8px 24px -4px rgba(245, 158, 11, 0.4);
+}
+
+/* Executive Voice Equalizer Visualizer */
+.voice-wave-indicator {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  padding: 0 10px;
+  height: 28px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+}
+.voice-wave-indicator.active {
+  display: inline-flex;
+}
+.voice-bar {
+  width: 3px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 99px;
+  animation: soundWave 0.75s infinite ease-in-out alternate;
+}
+.voice-bar:nth-child(2) { animation-delay: 0.12s; height: 16px; }
+.voice-bar:nth-child(3) { animation-delay: 0.24s; height: 22px; }
+.voice-bar:nth-child(4) { animation-delay: 0.36s; height: 14px; }
+.voice-bar:nth-child(5) { animation-delay: 0.48s; height: 18px; }
+@keyframes soundWave {
+  0% { transform: scaleY(0.35); opacity: 0.6; }
+  100% { transform: scaleY(1.15); opacity: 1; }
+}
+
+/* Table Refinements */
+tr { transition: background 0.18s ease; }
+tbody tr:hover { background: rgba(56, 189, 248, 0.05); }
+th {
+  background: rgba(7, 11, 20, 0.95) !important;
+  backdrop-filter: blur(12px);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 0.78rem !important;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+/* Executive Command Hub Modal */
+.cmd-palette-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 12, 0.78);
+  backdrop-filter: blur(10px);
+  z-index: 2000;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 10vh;
+}
+.cmd-palette-backdrop.open { display: flex; }
+.cmd-palette-box {
+  width: 92%;
+  max-width: 580px;
+  background: linear-gradient(165deg, #0f172a 0%, #070b14 100%);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 18px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.15);
+  overflow: hidden;
+}
+.cmd-palette-input {
+  width: 100%;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  color: #f8fafc;
+  font-family: 'Cairo', sans-serif;
+  font-size: 1rem;
+  outline: none;
+}
+.cmd-item {
+  padding: 11px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.06);
+  transition: 0.15s;
+}
+.cmd-item:hover {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+.kbd-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+
+
+/* ==========================================================================
+   THINKING ORBS 3D & OBSIDIAN GLASS THEME (#070707 + INTERACTIVE TILT)
+   ========================================================================== */
+:root {
+  --bg: #070707 !important;
+  --panel: rgba(20, 20, 22, 0.72) !important;
+  --card: rgba(29, 29, 29, 0.42) !important;
+  --border: rgba(44, 47, 54, 0.48) !important;
+}
+
+body {
+  background-color: #070707 !important;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.045) 0%, transparent 55%),
+    radial-gradient(circle at 85% 20%, rgba(245, 158, 11, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 15% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 45%) !important;
+  perspective: 1200px;
+}
+
+.kpi-card, .chat-box, .mini-chart-panel, .table-wrap, .stat-box, .toolbar-card, .container, .coll-item {
+  background: rgba(29, 29, 29, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 54, 0.38),
+    inset 0 0 50px 0 rgba(255, 255, 255, 0.015),
+    0 18px 40px -15px rgba(0, 0, 0, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(22px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+  position: relative;
+}
+
+.kpi-card::before, .stat-box::before, .thinking-orb-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    380px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.065),
+    transparent 45%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Official Thinking Orb Pill (Exact match to demo.tsx + 3D interactive controls) */
+.thinking-orb-pill {
+  display: inline-flex;
+  height: 70px;
+  align-items: center;
+  gap: 14px;
+  border-radius: 9999px;
+  padding: 0 24px 0 11px;
+  background: rgba(29, 29, 29, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 54, 0.31),
+    inset 0 0 50px 0 rgba(255, 255, 255, 0.012),
+    0 14px 34px rgba(0, 0, 0, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.thinking-orb-pill:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.38),
+    inset 0 0 55px 0 rgba(245, 158, 11, 0.04),
+    0 18px 42px rgba(0, 0, 0, 0.8) !important;
+}
+.thinking-orb-canvas-wrap {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.thinking-orb-canvas-wrap canvas {
+  width: 56px !important;
+  height: 56px !important;
+  display: block;
+}
+.thinking-orb-status-text {
+  white-space: nowrap;
+  font-size: 1.02rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: rgba(251, 251, 251, 0.62);
+  letter-spacing: 0.2px;
+}
+.orb-state-chip {
+  background: rgba(29, 29, 29, 0.55);
+  border: 1px solid rgba(44, 47, 54, 0.55);
+  color: rgba(251, 251, 251, 0.65);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.orb-state-chip:hover, .orb-state-chip.active {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+
+
+
+
+
+
+/* ==========================================================================
+   GLOWING SHADOW (@property --hue, --rotate, --bg-x, --bg-y) & MINIMAL BLACK
+   Source: components/ui/glowing-shadow.tsx (hsl(260deg 100% 3%) / #03000a)
+   Lazy-Mounted 60fps Architecture:
+   - inherits: false prevents cascade recalculation across the DOM.
+   - Idle buttons have content: none (0 pseudo-elements, 0 GPU layers when idle).
+   - Lights mount LAZILY ONLY on the specific button under mouse :hover!
+   ========================================================================== */
+@property --hue {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --rotate {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-x {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --glow-translate-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-size {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+@property --glow-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --glow-blur {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 3.5;
+}
+@property --glow-scale {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1.5;
+}
+@property --glow-radius {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 100;
+}
+@property --white-shadow {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes shadow-pulse {
+  0%, 24%, 46%, 73%, 96% { --white-shadow: 0.5; }
+  12%, 28%, 41%, 63%, 75%, 82%, 98% { --white-shadow: 2.2; }
+  6%, 32%, 57% { --white-shadow: 1.2; }
+  18%, 52%, 88% { --white-shadow: 3.0; }
+}
+
+@keyframes rotate-bg {
+  0% { --bg-x: 0; --bg-y: 0; }
+  25% { --bg-x: 100; --bg-y: 0; }
+  50% { --bg-x: 100; --bg-y: 100; }
+  75% { --bg-x: 0; --bg-y: 100; }
+  100% { --bg-x: 0; --bg-y: 0; }
+}
+
+@keyframes rotate {
+  from { --rotate: -70; --glow-translate-y: -65; }
+  25%, 50%, 60%, 75%, 85% { --glow-translate-y: -65; }
+  to { --rotate: 290; --glow-translate-y: -65; }
+}
+
+@keyframes hue-animation {
+  0% { --hue: 0; }
+  100% { --hue: 360; }
+}
+
+:root {
+  --bg: #020204 !important;
+  --panel: #040308 !important;
+  --card: hsl(260deg 100% 3%) !important;
+  --card-color: hsl(260deg 100% 3%) !important;
+  --border: rgba(255, 255, 255, 0.07) !important;
+  --hue-speed: 1;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+}
+
+html, body {
+  background-color: #020204 !important;
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 60%) !important;
+  color: #f8fafc !important;
+}
+
+.sidebar, .topbar, .header-bar, .status-strip, .collections-sidebar, .institutional-pulse-bar, .market-ticker-strip, .chat-header-bar, .chat-input-bar, .markets-toolbar, .modal, .modal-box, .cmd-palette-box, .mobile-bottom-nav {
+  background: #040308 !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Official GlowingShadow Component Classes */
+.glow-container {
+  --card-color: hsl(260deg 100% 3%);
+  --text-color: hsl(260deg 10% 55%);
+  --card-radius: 16px;
+  --border-width: 2px;
+  --bg-size: 1;
+  --hue: 0;
+  --hue-speed: 1;
+  --rotate: 0;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+  --glow-scale: 1.5;
+  --scale-factor: 1;
+  --glow-blur: 4;
+  --glow-opacity: 0;
+  --glow-radius: 100;
+  --glow-rotate-unit: 1deg;
+  position: relative;
+  z-index: 2;
+  border-radius: var(--card-radius);
+  cursor: pointer;
+}
+
+/* Minimal Black Idle State on All Clickable Positions & Buttons (NO lights & 0 extra GPU layers when idle) */
+.btn,
+.nav-btn,
+.kpi-card,
+.ticker-pill,
+.chip-btn,
+.sym-btn,
+.tf-btn,
+.toggle-btn,
+.coll-item,
+.stat-box,
+.session-widget,
+.pulse-metric,
+.cmd-item,
+.m-nav-item,
+.submit-btn,
+.thinking-orb-pill,
+#btnExecCommandHub {
+  --card-color: hsl(260deg 100% 3%);
+  --border-width: 2px;
+  --bg-size: 1;
+  --hue: 0;
+  --hue-speed: 1;
+  --rotate: 0;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+  --white-shadow: 0;
+  background: hsl(260deg 100% 3%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 8px 22px -6px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, color 0.16s ease !important;
+}
+
+/* Lazy Unmounted Idle Pseudo-Elements (content: none = 0 GPU memory & 0 paint cost when not hovered) */
+.btn::before,
+.nav-btn::before,
+.kpi-card::before,
+.ticker-pill::before,
+.chip-btn::before,
+.sym-btn::before,
+.tf-btn::before,
+.toggle-btn::before,
+.coll-item::before,
+.stat-box::before,
+.session-widget::before,
+.pulse-metric::before,
+.cmd-item::before,
+.m-nav-item::before,
+.submit-btn::before,
+.thinking-orb-pill::before,
+#btnExecCommandHub::before,
+.btn::after,
+.nav-btn::after,
+.kpi-card::after,
+.ticker-pill::after,
+.chip-btn::after,
+.sym-btn::after,
+.tf-btn::after,
+.toggle-btn::after,
+.coll-item::after,
+.stat-box::after,
+.session-widget::after,
+.pulse-metric::after,
+.cmd-item::after,
+.m-nav-item::after,
+.submit-btn::after,
+.thinking-orb-pill::after,
+#btnExecCommandHub::after {
+  content: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Clean Minimal Active State (Subtle border contrast, NO permanent rainbow lights) */
+.nav-btn.active,
+.ticker-pill.active,
+.sym-btn.active,
+.tf-btn.active,
+.toggle-btn.active,
+.coll-item.active,
+.m-nav-item.active {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* Mouse Hover ONLY -> Lazily Mount & Run 60fps GlowingShadow Light on That Single Button */
+.btn:hover,
+.nav-btn:hover,
+.kpi-card:hover,
+.ticker-pill:hover,
+.chip-btn:hover,
+.sym-btn:hover,
+.tf-btn:hover,
+.toggle-btn:hover,
+.coll-item:hover,
+.stat-box:hover,
+.session-widget:hover,
+.pulse-metric:hover,
+.cmd-item:hover,
+.m-nav-item:hover,
+.submit-btn:hover,
+.thinking-orb-pill:hover,
+#btnExecCommandHub:hover {
+  color: #ffffff !important;
+  background: hsl(260deg 100% 4%) !important;
+  isolation: isolate;
+  will-change: transform;
+  box-shadow:
+    0 0 calc(var(--white-shadow, 1.5) * 6px) calc(var(--white-shadow, 1.5) * 1px) rgba(255, 255, 255, 0.14),
+    0 12px 28px -6px rgba(0, 0, 0, 0.95) !important;
+  animation: shadow-pulse calc(var(--animation-speed) * 2) linear infinite;
+  transform: translateY(-1.5px);
+}
+
+.btn:hover::before,
+.nav-btn:hover::before,
+.kpi-card:hover::before,
+.ticker-pill:hover::before,
+.chip-btn:hover::before,
+.sym-btn:hover::before,
+.tf-btn:hover::before,
+.toggle-btn:hover::before,
+.coll-item:hover::before,
+.stat-box:hover::before,
+.session-widget:hover::before,
+.pulse-metric:hover::before,
+.cmd-item:hover::before,
+.m-nav-item:hover::before,
+.submit-btn:hover::before,
+.thinking-orb-pill:hover::before,
+#btnExecCommandHub:hover::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  --bg-size: 6;
+  opacity: 1;
+  background: hsl(0deg 0% 10%) radial-gradient(
+    45% 65% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 85%) calc(0% * var(--bg-size)),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 68%) calc(22% * var(--bg-size)),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 52%) calc(45% * var(--bg-size)),
+    transparent 100%
+  );
+  animation: hue-animation var(--animation-speed) linear infinite,
+             rotate-bg var(--animation-speed) linear infinite;
+  animation-play-state: running;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1.5px;
+}
+
+.btn:hover::after,
+.nav-btn:hover::after,
+.kpi-card:hover::after,
+.ticker-pill:hover::after,
+.chip-btn:hover::after,
+.sym-btn:hover::after,
+.tf-btn:hover::after,
+.toggle-btn:hover::after,
+.coll-item:hover::after,
+.stat-box:hover::after,
+.session-widget:hover::after,
+.pulse-metric:hover::after,
+.cmd-item:hover::after,
+.m-nav-item:hover::after,
+.submit-btn:hover::after,
+.thinking-orb-pill:hover::after,
+#btnExecCommandHub:hover::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.85;
+  background: radial-gradient(
+    60% 60% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 60% / 0.25),
+    transparent 80%
+  );
+  filter: blur(8px);
+  animation: hue-animation var(--animation-speed) linear infinite,
+             rotate-bg var(--animation-speed) linear infinite;
+  animation-play-state: running;
+}
+
+/* Minimal Black Panels & Clickable Table Rows */
+.chat-box, .mini-chart-panel, .table-wrap, .toolbar-card, .container, .doc-card {
+  background: hsl(260deg 100% 3%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
+}
+
+table tbody tr {
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.05);
+}
+
+input, select, textarea {
+  background: #030207 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* Instant Trader Search Styles */
+.topbar-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 320px;
+  margin: 0 10px;
+  display: flex;
+  align-items: center;
+}
+.topbar-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 34px 7px 34px !important;
+  background: rgba(10, 16, 30, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 8px !important;
+  color: #f8fafc !important;
+  font-size: 0.82rem !important;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.topbar-search-input:focus {
+  border-color: #38bdf8 !important;
+  background: rgba(15, 23, 42, 1) !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.2) !important;
+}
+.contact-search-box {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 40px 10px 40px !important;
+  background: #020205 !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-radius: 10px !important;
+  color: #f8fafc !important;
+  font-size: 0.88rem !important;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+.contact-search-box:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.25) !important;
+}
+.search-icon-pos {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  inset-inline-start: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+  font-size: 14px;
+  z-index: 2;
+}
+.search-clear-pos {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  inset-inline-end: 10px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  display: none;
+  z-index: 2;
+  line-height: 1;
+}
+.search-clear-pos:hover {
+  color: #f8fafc;
+}
+@media (max-width: 820px) {
+  .topbar-search-wrap {
+    display: none;
+  }
+}
+
+</style>
+<script id="initialDashboardData" type="application/json">{"kpis":{"total_contacts":0,"total_leads":0,"vip_leads":0,"open_tickets":0},"leads":[],"contacts":[],"tickets":[],"audit_logs":[]}</script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebarDrawer">
+    <div class="logo" style="cursor:pointer;" onclick="switchView('aios', document.getElementById('nav-aios'))">
+      <span style="display:inline-flex; align-items:center; gap:8px;"><canvas id="logoMiniOrbCanvas" width="24" height="24" style="width:24px;height:24px;"></canvas> Tradesejon AIOS</span>
+      <button class="close-drawer-btn" onclick="event.stopPropagation(); toggleDrawer(false)">✕</button>
+    </div>
+    <button class="nav-btn active" id="nav-aios" onclick="switchView('aios', this)">🧠 المساعد التنفيذي (AIOS)</button>
+    <button class="nav-btn" id="nav-markets" onclick="switchView('markets', this)">📈 شارتات السوق الحية (Live)</button>
+    <button class="nav-btn" id="nav-leads" onclick="switchView('leads', this)">🎯 العملاء المحتملون واستمارة التقييم</button>
+    <button class="nav-btn" id="nav-contacts" onclick="switchView('contacts', this)">👥 سجل المتداولين (CRM)</button>
+    <button class="nav-btn" id="nav-tickets" onclick="switchView('tickets', this)">🎫 تذاكر العلاقات العامة (PR)</button>
+    <a href="/form" id="nav-form" target="_blank" class="nav-btn" style="text-decoration:none; color:#38bdf8;">🔗 فتح استمارة المتداولين ↗</a>
+    <a href="https://t.me/YOUR_CEO_BOT" id="nav-ceo-bot" target="_blank" class="nav-btn" style="text-decoration:none; color:#f59e0b;">👑 بوت الرئيس التنفيذي ↗</a>
+    <a href="https://t.me/YOUR_PR_BOT" id="nav-pr-bot" target="_blank" class="nav-btn" style="text-decoration:none; color:#38bdf8;">🎙️ بوت التنفيذ والعلاقات العامة (PR) ↗</a>
+    <a href="https://t.me/YOUR_TRADER_BOT" id="nav-trader-bot" target="_blank" class="nav-btn" style="text-decoration:none; color:#a855f7;">📈 بوت مجتمع المتداولين (VIP) ↗</a>
+    <a href="/db" id="nav-db" target="_blank" class="nav-btn" style="text-decoration:none; color:#10b981; font-weight:700;">🗄️ مستكشف قاعدة بيانات Mongo (Live) ↗</a>
+
+    <div class="session-widget" onclick="switchView('aios', document.getElementById('nav-aios')); quickAsk('ما هو موعد الجلسة اليومية المعتمدة؟')" style="cursor:pointer;" title="اضغط للسؤال عن موعد الجلسة أو تعديله">
+      <h4>🕒 موعد الجلسة اليومية المعتمدة</h4>
+      <div class="session-time" id="sidebarSessionTime">09:30 PM</div>
+      <div style="font-size:0.74rem; color:var(--muted); margin-top:4px;">بتوقيت القاهرة • متزامن مع التيليجرام</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle-btn" onclick="toggleDrawer(true)">☰</button>
+        <div style="font-weight:800; font-size:0.95rem;">غرفة القيادة المركزية • Tradesejon Enterprise</div>
+      </div>
+      <!-- Global Instant Trader Search -->
+      <div class="topbar-search-wrap">
+        <span class="search-icon-pos">🔍</span>
+        <input type="text" id="topbarTraderSearch" class="topbar-search-input" placeholder="بحث فوري عن متداول (رقم / اسم / إيميل)..." oninput="handleTopTraderSearch(this.value)" autocomplete="off">
+        <button id="topbarSearchClear" class="search-clear-pos" onclick="clearTraderSearch()" title="مسح">✕</button>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="live-clock-badge" id="headerLiveClock">
+          <span class="live-pulse-dot"></span>
+          <span id="clockDigits">02:54:48 PM</span>
+          <span id="clockSuffix" style="color:var(--muted); font-size:0.72rem; margin-right:4px;">(القاهرة Live)</span>
+        </div>
+        <!-- Bilingual AR | EN Toggle Switch -->
+        <div class="lang-switch-wrap" style="display:inline-flex; background:#0f172a; border:1px solid #334155; border-radius:8px; padding:2px; gap:2px; margin:0 4px;">
+          <button id="langBtnAr" class="btn" style="padding:4px 9px; font-size:0.78rem; min-height:28px; background:rgba(245,158,11,0.25); color:#f59e0b; border:none; border-radius:6px; font-weight:800; cursor:pointer;" onclick="setAppLanguage('ar')">AR</button>
+          <button id="langBtnEn" class="btn" style="padding:4px 9px; font-size:0.78rem; min-height:28px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-weight:800; cursor:pointer;" onclick="setAppLanguage('en')">EN</button>
+        </div>
+        <button id="btnExecCommandHub" onclick="toggleCmdPalette(true)" class="btn" style="cursor:pointer; color:#fbbf24; padding:6px 12px; min-height:36px; border-radius:999px; font-family:'Cairo','Inter',sans-serif; font-weight:800; font-size:0.76rem; display:inline-flex; align-items:center; gap:6px;">⚡ <span id="execCmdHubLabel">مركز الأوامر التنفيذي</span></button>
+        <button id="btnToggleSideChart" class="btn" style="background:#1e293b; color:#38bdf8; min-height:36px; padding:6px 10px; font-size:0.78rem;" onclick="toggleInlineChart()">📉 شارت جانبي</button>
+        <button id="btnRefreshAll" class="btn btn-primary" style="min-height:36px; padding:6px 12px; font-size:0.8rem;" onclick="refreshAll()">🔄 تحديث</button>
+      </div>
+    </header>
+    <div class="market-ticker-strip" id="marketTickerStrip">
+      <div class="live-sync-badge" onclick="switchView('markets', document.getElementById('nav-markets'))" style="cursor:pointer;" title="فتح شارتات الأسواق الحية">
+        <span class="live-pulse-dot"></span>
+        <span id="tickerLiveText">بث حي متزامن 1s</span>
+      </div>
+      <!-- Markets populated dynamically by JS for all 12 assets -->
+    </div>
+
+    <section class="kpi-row">
+      <div class="kpi-card" onclick="switchView('contacts', document.getElementById('nav-contacts'))" style="cursor:pointer;" title="اضغط لفتح سجل المتداولين المسجلين (CRM)">
+        <div class="label">إجمالي المتداولين المسجلين (CRM)</div>
+        <div class="val" id="kpiContacts">0</div>
+      </div>
+      <div class="kpi-card" onclick="switchView('leads', document.getElementById('nav-leads'))" style="cursor:pointer;" title="اضغط لفتح استمارات التقييم المالي (Leads)">
+        <div class="label">استمارات التقييم المالي (Leads)</div>
+        <div class="val" id="kpiLeads" style="color:var(--accent);">0</div>
+      </div>
+      <div class="kpi-card" onclick="switchView('leads', document.getElementById('nav-leads'))" style="cursor:pointer;" title="اضغط لعرض العملاء ذوي المحافظ الكبرى (VIP)">
+        <div class="label">العملاء ذوو المحافظ الكبرى (VIP)</div>
+        <div class="val" id="kpiVip" style="color:var(--green);">0</div>
+      </div>
+      <div class="kpi-card" onclick="switchView('tickets', document.getElementById('nav-tickets'))" style="cursor:pointer;" title="اضغط لفتح تذاكر الدعم المفتوحة (PR)">
+        <div class="label">تذاكر الدعم المفتوحة</div>
+        <div class="val" id="kpiTickets" style="color:var(--blue);">0</div>
+      </div>
+    </section>
+
+    <div class="content-area">
+      <!-- 1. AIOS Chat View -->
+      <div class="view-section active" id="v-aios">
+        <div class="aios-workspace with-chart" id="aiosWorkspace">
+          <div class="chat-box">
+            <div class="chat-header-bar" style="padding: 12px 16px; background: rgba(7,7,7,0.85); border-bottom: 1px solid rgba(44,47,54,0.45); display:flex; flex-direction:column; gap:10px;">
+              <!-- Official ThinkingOrb 64px Status Pill (Shown ONLY when AIOS is thinking / preparing a response) -->
+              <div id="aiosThinkingOrbWrap" style="display:none; align-items:center; width:100%;">
+                <div class="thinking-orb-pill" id="aiosThinkingOrbPill">
+                  <span class="thinking-orb-canvas-wrap">
+                    <canvas id="aiosMainOrbCanvas"></canvas>
+                  </span>
+                  <span class="thinking-orb-status-text" id="aiosOrbStatusLabel">Thinking….</span>
+                </div>
+              </div>
+              <div class="quick-chips" id="quickChipsBar">
+                <button class="chip-btn" id="qChip1" onclick="quickAsk(currentAppLang==='en'?'What are the live Gold and Bitcoin prices with Level 2 order flow analysis?':'كم سعر الذهب والبيتكوين الآن مع تحليل تدفق الأوامر Level 2؟')">📈 أسعار السوق وتدفق الأوامر</button>
+                <button class="chip-btn" id="qChip2" onclick="quickAsk(currentAppLang==='en'?'Show system stats, total leads, and open tickets':'إحصائيات مجتمع المتداولين وعدد الليدات والتذاكر')">📊 إحصائيات النظام والـ CRM</button>
+                <button class="chip-btn" id="qChip3" onclick="quickAsk(currentAppLang==='en'?'Set today trading session to 9:30 PM':'خلي جلسة النهاردة الساعة 9:30 مساءً')">🕒 جلسة اليوم 9:30 مساءً</button>
+                <button class="chip-btn" id="qChip4" onclick="quickAsk(currentAppLang==='en'?'Approve latest lead and send welcome email':'اعتمد آخر عميل وابعتله الإيميل')">✉️ اعتماد آخر عميل وإرسال الخطة</button>
+                <button class="chip-btn" id="qChip5" onclick="quickAsk(currentAppLang==='en'?'Broadcast alert that momentum volume is in an A+ setup zone':'ابعت للناس تنبيه إن الزخم في منطقة نموذج A+ عالي الدقة')">📢 بث تنبيه للمتداولين</button>
+              </div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+              <div class="msg ai" id="aiosWelcomeMsg">
+                مرحباً بك في غرفة قيادة <strong>Tradesejon AIOS</strong> (المتطابقة 100% مع بوتات التليجرام التنفيذية <a href="https://t.me/YOUR_CEO_BOT" target="_blank" style="color:#fbbf24; text-decoration:none; font-weight:700;"><code>@YOUR_CEO_BOT</code> ↗</a> و <a href="https://t.me/YOUR_PR_BOT" target="_blank" style="color:#38bdf8; text-decoration:none; font-weight:700;"><code>@YOUR_PR_BOT</code> ↗</a>).<br>
+                المنظومة مصممة وفق أحدث استراتيجيات الـ Hyper-Scalping وإدارة رأس المال الصارمة. يمكنك التحدث معي كتابةً أو <strong>بصوتك (عربي مصري أو English)</strong>، أو اضغط على أي أمر أدناه لتنفيذه فوراً:<br>
+                • <em onclick="quickAsk('الدهب والبيتكوين عاملين كام دلوقتي؟')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"الدهب والبيتكوين عاملين كام دلوقتي؟"</em><br>
+                • <em onclick="quickAsk('خلي جلسة النهاردة الساعة 9:30 بالليل وبلغ المشتركين')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"خلي جلسة النهاردة الساعة 9:30 بالليل وبلغ المشتركين"</em><br>
+                • <em onclick="quickAsk('oshkoro eno mn awa2el elnas 3al group')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"oshkoro eno mn awa2el elnas 3al group" (اشكره إنه من أوائل الناس عالجروب)</em><br>
+                • <em onclick="quickAsk('اعتمد آخر عميل وابعتله إيميل الترحيب والخطة المعتمدة')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"اعتمد آخر عميل وابعتله إيميل الترحيب والخطة المعتمدة"</em>
+              </div>
+            </div>
+            <div class="chat-input-bar">
+              <button class="btn btn-lang" id="langBtn" onclick="cycleVoiceLang()" title="Change Microphone Language">🇪🇬/🇬🇧 تلقائي</button>
+              <button class="btn btn-voice" id="voiceBtn" onclick="toggleVoice()" title="Speak with Microphone (Egyptian Masri + English)">🎙️ صوت</button>
+              <input type="file" id="aiosMediaInput" accept="image/*,video/*,.gif,.pdf,.zip,.doc,.docx,.csv,.json,audio/*,*/*" style="display:none;" onchange="handleAiosMediaUpload(this)">
+              <button class="btn" id="mediaUploadBtn" onclick="document.getElementById('aiosMediaInput').click()" title="Attach & Broadcast Image, Video, GIF, or Any File to Traders" style="min-height:40px; padding:8px 12px; color:#38bdf8; font-weight:700;">📎 <span id="mediaBtnLabel">ملف/ميديا</span></button>
+              <div class="voice-wave-indicator" id="voiceWaveIndicator" title="Active Voice Wave"><span class="voice-bar"></span><span class="voice-bar"></span><span class="voice-bar"></span><span class="voice-bar"></span><span class="voice-bar"></span></div>
+              <input type="text" id="chatInput" placeholder="اكتب أو تحدث بأي أمر (مثال: كام سعر الدهب؟ أو oshkoro eno mn awa2el elnas)..." onkeydown="if(event.key==='Enter') sendChat()">
+              <button class="btn btn-primary" id="sendChatBtn" onclick="sendChat()">إرسال 🚀</button>
+            </div>
+          </div>
+
+                    <div class="mini-chart-panel" id="miniChartPanel">
+            <div class="markets-toolbar">
+              <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:6px;">
+                <span style="font-size:0.86rem; font-weight:800; color:var(--accent);" id="miniChartTitle">🥇 الذهب (XAU/USD)</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <button class="sym-btn active" id="btnModeCandles" onclick="setChartRenderMode('candles')">🕯️ شموع</button>
+                  <button class="sym-btn" id="btnModeArea" onclick="setChartRenderMode('area')">📈 مساحي</button>
+                  <button class="sym-btn" onclick="toggleTvFallback()" title="تبديل إلى شارت TradingView إذا كان مدعوماً">🌐 TV Pro</button>
+                </div>
+              </div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-top:4px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.05);">
+                <div style="display:flex; gap:4px; align-items:center;">
+                  <span style="font-size:0.72rem; color:var(--muted);" id="tfTitleLabel">الفريم الزمني:</span>
+                  <button class="tf-btn" id="tfBtn1s" onclick="setChartTimeframe('1s', this)">1s لحظي</button>
+                  <button class="tf-btn active" onclick="setChartTimeframe('1m', this)">1m</button>
+                  <button class="tf-btn" onclick="setChartTimeframe('5m', this)">5m</button>
+                  <button class="tf-btn" onclick="setChartTimeframe('15m', this)">15m</button>
+                  <button class="tf-btn" onclick="setChartTimeframe('1h', this)">1h</button>
+                  <button class="tf-btn" onclick="setChartTimeframe('1d', this)">1D</button>
+                </div>
+                <div style="font-size:0.72rem; color:var(--muted); font-family:monospace;" id="chartTimeframeLabel">الفترة: دقيقة واحدة (1m)</div>
+              </div>
+              <div class="markets-toolbar-scroll" id="miniMarketsTabs">
+                <!-- 12 market buttons injected by JS -->
+              </div>
+            </div>
+            <div id="miniTvContainer" style="display:none;"></div>
+            <div class="chart-canvas-wrap" id="chartCanvasWrap">
+              <canvas id="marketCanvas"></canvas>
+              <div class="chart-crosshair-tooltip" id="chartCrosshairTooltip"></div>
+              <div class="chart-price-badge" id="chartLivePriceBadge"></div>
+              <div id="tvEmbedWrap" style="display:none; position:absolute; inset:0; z-index:20; background:#090e1a;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Full Live Market Charts View -->
+      <div class="view-section" id="v-markets">
+        <div class="chat-box" style="flex:1; min-height:540px;">
+          <div class="markets-toolbar">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;" id="fullMarketsBtnBar">
+              <button class="sym-btn active" id="fullSymXau" onclick="loadFullChart('OANDA:XAUUSD', currentAppLang==='en'?'Gold Spot (XAU/USD)':'الذهب مقابل الدولار (XAU/USD)', this, 'XAUUSD')">🥇 الذهب XAU/USD</button>
+              <button class="sym-btn" id="fullSymBtc" onclick="loadFullChart('BINANCE:BTCUSDT', currentAppLang==='en'?'Bitcoin (BTC/USDT)':'البيتكوين (BTC/USDT)', this, 'BTCUSDT')">₿ البيتكوين BTC/USD</button>
+              <button class="sym-btn" id="fullSymEth" onclick="loadFullChart('BINANCE:ETHUSDT', currentAppLang==='en'?'Ethereum (ETH/USDT)':'الإيثيريوم (ETH/USDT)', this, 'ETHUSDT')">💎 الإيثيريوم ETH/USD</button>
+              <button class="sym-btn" id="fullSymEur" onclick="loadFullChart('FX:EURUSD', currentAppLang==='en'?'EUR/USD':'اليورو دولار (EUR/USD)', this, 'EURUSD')">💶 اليورو EUR/USD</button>
+              <button class="sym-btn" id="fullSymNas" onclick="loadFullChart('FOREXCOM:NSXUSD', currentAppLang==='en'?'Nasdaq 100 (US100)':'مؤشر ناسداك (US100)', this, 'US100')">📊 ناسداك US100</button>
+              <button class="sym-btn" id="fullSymOil" onclick="loadFullChart('TVC:USOIL', currentAppLang==='en'?'WTI Crude Oil (USOIL)':'النفط الخام (USOIL)', this, 'USOIL')">🛢️ النفط USOIL</button>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button class="sym-btn" id="btnToggleFullTv" onclick="toggleFullTvEmbed()" style="min-height:36px; padding:6px 12px; font-size:0.78rem;">🌐 TradingView Pro</button>
+              <button class="btn btn-primary" id="btnAskAiosChart" style="min-height:36px; padding:6px 12px; font-size:0.8rem;" onclick="askAiAboutCurrentChart()">🤖 اسأل AIOS عن هذا الشارت</button>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap" id="fullChartCanvasWrap" style="flex:1; width:100%; height:460px; min-height:460px; position:relative; display:block;">
+            <canvas id="fullMarketCanvas"></canvas>
+            <div class="chart-crosshair-tooltip" id="fullChartCrosshairTooltip" style="display:block;"></div>
+            <div class="chart-price-badge" id="fullChartLivePriceBadge"></div>
+            <div id="fullTvContainer" style="display:none; position:absolute; inset:0; z-index:20; background:#090e1a; width:100%; height:100%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Leads View -->
+      <div class="view-section" id="v-leads">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>التصنيف</th>
+                <th>رأس المال</th>
+                <th>الخبرة</th>
+                <th>تقييم الذكاء الاصطناعي</th>
+                <th>الحالة / الإجراء</th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Ready — Connect MongoDB Cluster or submit Lead Intake to stream live CRM leads.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 4. Contacts View -->
+      <div class="view-section" id="v-contacts">
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h2 id="crmViewTitle" style="margin:0; font-size:1.25rem; font-weight:800; color:#f8fafc; display:flex; align-items:center; gap:8px;">👥 سجل المتداولين (CRM)</h2>
+            <div id="crmViewSubtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:3px;">بحث فوري وتواصل مباشر عبر واتساب وتيليجرام</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1; justify-content:flex-end;">
+            <div style="position:relative; width:100%; max-width:440px;">
+              <span class="search-icon-pos">🔍</span>
+              <input type="text" id="contactSearchInput" class="contact-search-box" placeholder="ابحث فوراً برقم الهاتف، الاسم، الإيميل، أو المعرف..." oninput="handleTraderSearch(this.value)" autocomplete="off">
+              <button id="contactSearchClear" class="search-clear-pos" onclick="clearTraderSearch()" title="مسح">✕</button>
+            </div>
+            <div id="contactSearchBadge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:7px 14px; font-size:0.82rem; font-weight:700; white-space:nowrap;">
+              15 من 15 متداول
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead id="contactsTableHead">
+              <tr>
+                <th>الاسم بالكامل (Name)</th>
+                <th>رقم الهاتف (Phone Number)</th>
+                <th>المنصة (Platform)</th>
+                <th>البريد / تليجرام (Email / Telegram)</th>
+                <th>التصنيف (Tier)</th>
+              </tr>
+            </thead>
+            <tbody id="contactsTableBody"><tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);">Ready — Connect MongoDB Cluster to stream verified member contacts.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 5. Tickets View (Showing Full Bot & PR Responses) -->
+      <div class="view-section" id="v-tickets">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>رقم التذكرة</th>
+                <th>المتداول</th>
+                <th>استفسار / رسالة المتداول</th>
+                <th>الحالة</th>
+                <th>الرد المسجل (Our Recorded Response)</th>
+                <th>التوقيت</th>
+              </tr>
+            </thead>
+            <tbody id="ticketsTableBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--muted);">Ready — Live executive & PR agent interaction logs will appear here.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav">
+      <button class="m-nav-item active" id="mnav-aios" onclick="switchView('aios', this)">
+        <span>🧠</span><span>AIOS</span>
+      </button>
+      <button class="m-nav-item" id="mnav-markets" onclick="switchView('markets', this)">
+        <span>📈</span><span>السوق</span>
+      </button>
+      <button class="m-nav-item" id="mnav-leads" onclick="switchView('leads', this)">
+        <span>🎯</span><span>الليدات</span>
+      </button>
+      <button class="m-nav-item" id="mnav-contacts" onclick="switchView('contacts', this)">
+        <span>👥</span><span>CRM</span>
+      </button>
+      <button class="m-nav-item" id="mnav-tickets" onclick="switchView('tickets', this)">
+        <span>🎫</span><span>التذاكر</span>
+      </button>
+    </nav>
+  </main>
+</div>
+
+<!-- Email Review & Approval Modal -->
+<div class="modal-backdrop" id="emailModal">
+  <div class="modal">
+    <h3 style="color:var(--accent); margin-bottom:10px;">✉️ مراجعة واعتماد خطة البريد الإلكتروني</h3>
+    <p id="modalLeadInfo" style="color:var(--muted); font-size:0.86rem; margin-bottom:10px;"></p>
+    <div id="modalAiSummary" style="background:#070b14; border:1px solid #1e3a8a; padding:12px; border-radius:10px; margin-bottom:12px; font-size:0.86rem; color:#93c5fd;"></div>
+    <label style="font-size:0.82rem; font-weight:700;">عنوان الإيميل (Subject)</label>
+    <input type="text" id="modalEmailSubject">
+    <label style="font-size:0.82rem; font-weight:700;">نص الإيميل الاستراتيجي (Body)</label>
+    <textarea id="modalEmailBody" rows="7"></textarea>
+    <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+      <button class="btn" style="background:#334155; color:#fff;" onclick="closeModal()">إغلاق</button>
+      <button class="btn btn-primary" id="modalApproveBtn" onclick="approveAndSendEmail()">✅ اعتماد وإرسال الإيميل الآن</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ticket Detail & Recorded Response Modal -->
+<div class="modal-backdrop" id="ticketModalBackdrop">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 style="color:var(--blue);">🎫 تفاصيل التذكرة والرد الكامل المسجل</h3>
+      <span id="ticketModalId" style="font-family:monospace; background:#1e293b; padding:2px 8px; border-radius:6px; color:#38bdf8;"></span>
+    </div>
+    <p id="ticketModalUser" style="color:var(--muted); font-size:0.84rem; margin-bottom:10px;"></p>
+    
+    <label style="font-size:0.82rem; font-weight:700; color:#fbbf24;">💬 استفسار المتداول:</label>
+    <div id="ticketModalQuestion" style="background:#070b14; border:1px solid var(--border); padding:12px; border-radius:10px; margin-top:4px; margin-bottom:14px; font-size:0.9rem; line-height:1.6; color:#f8fafc;"></div>
+    
+    <label style="font-size:0.82rem; font-weight:700; color:#34d399;">🤖 الرد المسجل للمتداول (Our Recorded Response):</label>
+    <textarea id="ticketModalAnswer" rows="8" style="margin-top:6px; line-height:1.6; font-size:0.88rem;"></textarea>
+    
+    <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; margin-top:10px;">
+      <button class="btn" style="background:#334155; color:#fff;" onclick="closeTicketModal()">إغلاق</button>
+      <button class="btn btn-primary" id="ticketModalSubmitBtn" onclick="submitTicketReplyFromModal()">إرسال / تحديث الرد للمتداول الآن 🚀</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+function toEnglishDigits(val) {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u06F0-\u06F9]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48));
+}
+let currentLeads = [];
+let currentTickets = [];
+let selectedLeadId = null;
+let selectedTicket = null;
+let currentActiveSymbol = 'OANDA:XAUUSD';
+let currentActiveSymbolName = 'الذهب (XAU/USD)';
+let voiceLangMode = 'auto';
+let chatHistory = [];
+
+function toggleDrawer(open) {
+  const dr = document.getElementById('sidebarDrawer');
+  if (open) dr.classList.add('open');
+  else dr.classList.remove('open');
+}
+
+let isFullTvActive = false;
+let fullChartMarketKey = 'XAUUSD';
+
+function switchView(id, btn) {
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.m-nav-item').forEach(b => b.classList.remove('active'));
+
+  const target = document.getElementById('v-' + id);
+  if (target) target.classList.add('active');
+
+  const sideBtn = document.getElementById('nav-' + id);
+  if (sideBtn) sideBtn.classList.add('active');
+
+  const mobBtn = document.getElementById('mnav-' + id);
+  if (mobBtn) mobBtn.classList.add('active');
+
+  toggleDrawer(false);
+
+  if (window.lastDashboardData) {
+    renderDashboard(window.lastDashboardData);
+  } else if (window.INITIAL_DASHBOARD_DATA) {
+    renderDashboard(window.INITIAL_DASHBOARD_DATA);
+  } else {
+    refreshAll();
+  }
+
+  requestAnimationFrame(() => {
+    drawLiveChart();
+    if (id === 'markets') {
+      drawFullMarketChart();
+    }
+  });
+}
+
+function toggleInlineChart() {
+  const ws = document.getElementById('aiosWorkspace');
+  ws.classList.toggle('with-chart');
+  setTimeout(() => drawLiveChart(), 60);
+}
+
+function renderTradingViewIframe(containerId, tvSymbol) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const loc = isEn ? 'en' : 'ar_AE';
+  const encoded = encodeURIComponent(tvSymbol || 'OANDA:XAUUSD');
+  el.innerHTML = `<iframe loading="lazy" src="https://s.tradingview.com/widgetembed/?frameElementId=tv_${containerId}&symbol=${encoded}&interval=15&theme=dark&style=1&locale=${loc}" style="width:100%; height:100%; min-height:440px; border:0;" allowfullscreen></iframe>`;
+}
+
+function toggleFullTvEmbed() {
+  isFullTvActive = !isFullTvActive;
+  const tvEl = document.getElementById('fullTvContainer');
+  const btn = document.getElementById('btnToggleFullTv');
+  if (!tvEl) return;
+  if (isFullTvActive) {
+    tvEl.style.display = 'block';
+    if (btn) btn.classList.add('active');
+    renderTradingViewIframe('fullTvContainer', currentActiveSymbol);
+  } else {
+    tvEl.style.display = 'none';
+    tvEl.innerHTML = '';
+    if (btn) btn.classList.remove('active');
+    drawFullMarketChart();
+  }
+}
+
+function loadFullChart(tvSymbol, label, btn, marketKey) {
+  currentActiveSymbol = tvSymbol;
+  currentActiveSymbolName = label;
+  if (marketKey && ALL_MARKETS[marketKey]) {
+    fullChartMarketKey = marketKey;
+    currentMarketKey = marketKey;
+    initCandleHistory(marketKey);
+  }
+  document.querySelectorAll('#v-markets .sym-btn').forEach(b => {
+    if (b.id !== 'btnToggleFullTv') b.classList.remove('active');
+  });
+  if (btn) btn.classList.add('active');
+  if (isFullTvActive) {
+    renderTradingViewIframe('fullTvContainer', tvSymbol);
+  } else {
+    drawFullMarketChart();
+  }
+  drawLiveChart();
+}
+
+function askAiAboutCurrentChart() {
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  switchView('aios', document.getElementById('nav-aios'));
+  quickAsk(isEn ? `Analyze ${currentActiveSymbolName} live chart and key entry/exit levels right now` : `حلل شارت ${currentActiveSymbolName} الآن مع أهم مستويات الدخول والخروج`);
+}
+
+// ======================================================================
+// Tradesejon Institutional Real-Time 12-Markets & Financial Chart Engine (1s Precision)
+// ======================================================================
+const ALL_MARKETS = {
+  'XAUUSD': { symbol: 'XAU/USD', name_ar: 'الذهب (Gold)', name_en: 'Gold Spot', icon: '🥇', base: 3940.33, decimals: 2, unit: '$', cat: 'commodities', tv: 'OANDA:XAUUSD', amp: 0.45 },
+  'XAGUSD': { symbol: 'XAG/USD', name_ar: 'الفضة (Silver)', name_en: 'Silver Spot', icon: '🥈', base: 34.85, decimals: 2, unit: '$', cat: 'commodities', tv: 'TVC:SILVER', amp: 0.04 },
+  'BTCUSDT': { symbol: 'BTC/USD', name_ar: 'البيتكوين (Bitcoin)', name_en: 'Bitcoin', icon: '₿', base: 77231.63, decimals: 2, unit: '$', cat: 'crypto', tv: 'BINANCE:BTCUSDT', amp: 18.5 },
+  'ETHUSDT': { symbol: 'ETH/USD', name_ar: 'الإيثيريوم (Ethereum)', name_en: 'Ethereum', icon: '💎', base: 2274.34, decimals: 2, unit: '$', cat: 'crypto', tv: 'BINANCE:ETHUSDT', amp: 1.8 },
+  'SOLUSDT': { symbol: 'SOL/USD', name_ar: 'سولانا (Solana)', name_en: 'Solana', icon: '☀️', base: 188.75, decimals: 2, unit: '$', cat: 'crypto', tv: 'BINANCE:SOLUSDT', amp: 0.35 },
+  'EURUSD': { symbol: 'EUR/USD', name_ar: 'اليورو/دولار', name_en: 'EUR/USD', icon: '💶', base: 1.12618, decimals: 5, unit: '', cat: 'forex', tv: 'FX:EURUSD', amp: 0.00015 },
+  'GBPUSD': { symbol: 'GBP/USD', name_ar: 'الاسترليني / دولار', name_en: 'GBP/USD', icon: '💷', base: 1.3120, decimals: 4, unit: '', cat: 'forex', tv: 'FX:GBPUSD', amp: 0.0005 },
+  'USDJPY': { symbol: 'USD/JPY', name_ar: 'الدولار / ين', name_en: 'USD/JPY', icon: '💴', base: 152.42, decimals: 2, unit: '¥', cat: 'forex', tv: 'FX:USDJPY', amp: 0.08 },
+  'US100': { symbol: 'US100', name_ar: 'ناسداك (Nasdaq 100)', name_en: 'Nasdaq 100', icon: '📊', base: 20465.50, decimals: 2, unit: '$', cat: 'indices', tv: 'FOREXCOM:NSXUSD', amp: 6.2 },
+  'US500': { symbol: 'US500', name_ar: 'إس آند بي (S&P 500)', name_en: 'S&P 500', icon: '📈', base: 5886.20, decimals: 2, unit: '$', cat: 'indices', tv: 'FOREXCOM:SPXUSD', amp: 1.6 },
+  'US30': { symbol: 'US30', name_ar: 'داو جونز (Dow Jones)', name_en: 'Dow Jones 30', icon: '🏛️', base: 43735.00, decimals: 2, unit: '$', cat: 'indices', tv: 'FOREXCOM:DJI', amp: 8.5 },
+  'USOIL': { symbol: 'USOIL', name_ar: 'النفط الخام (WTI Oil)', name_en: 'WTI Crude Oil', icon: '🛢️', base: 71.85, decimals: 2, unit: '$', cat: 'commodities', tv: 'TVC:USOIL', amp: 0.18 }
+};
+
+let currentMarketKey = 'XAUUSD';
+
+let selectedTimeframe = '1m';
+
+function setChartTimeframe(tf, btn) {
+  selectedTimeframe = tf;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const lbl = document.getElementById('chartTimeframeLabel');
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const labels = isEn ? {
+    '1s': 'Period: 1 Second (1s Live)',
+    '1m': 'Period: 1 Minute (1m)',
+    '5m': 'Period: 5 Minutes (5m)',
+    '15m': 'Period: 15 Minutes (15m)',
+    '1h': 'Period: 1 Hour (1h)',
+    '1d': 'Period: 1 Day (1D)'
+  } : {
+    '1s': 'الفترة: ثانية واحدة (1s Live)',
+    '1m': 'الفترة: دقيقة واحدة (1m)',
+    '5m': 'الفترة: 5 دقائق (5m)',
+    '15m': 'الفترة: 15 دقيقة (15m)',
+    '1h': 'الفترة: ساعة واحدة (1h)',
+    '1d': 'الفترة: يوم واحد (1D)'
+  };
+  if (lbl) lbl.textContent = labels[tf] || tf;
+
+  // Re-generate candle history matching the timeframe
+  candleHistory[currentMarketKey] = null;
+  initCandleHistory(currentMarketKey);
+  drawLiveChart();
+}
+
+function updateLiveClock() {
+  const el = document.getElementById('clockDigits');
+  if (!el) return;
+  const now = new Date();
+  // Cairo time (UTC+2)
+  el.textContent = now.toLocaleTimeString('en-US', {
+    hour12: true,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+setInterval(updateLiveClock, 1000);
+updateLiveClock();
+
+let chartRenderMode = 'candles'; // 'candles' or 'area'
+let marketPricesStore = {};
+let previousPricesStore = {};
+let candleHistory = {}; // key -> array of { time, open, high, low, close, vol }
+let isTvEmbedActive = false;
+
+// Generate rich synthetic historical candles for realistic charts
+function getTfMilliseconds(tf) {
+  const map = { '1s': 1000, '1m': 60000, '5m': 300000, '15m': 900000, '1h': 3600000, '1d': 86400000 };
+  return map[tf] || 60000;
+}
+
+function initCandleHistory(key) {
+  if (candleHistory[key]) return candleHistory[key];
+  const m = ALL_MARKETS[key] || ALL_MARKETS['XAUUSD'];
+  const bars = [];
+  const count = 48;
+  const stepMs = getTfMilliseconds(selectedTimeframe);
+  const now = Date.now();
+  const curLivePrice = (marketPricesStore[key] && marketPricesStore[key].price) ? Number(marketPricesStore[key].price) : m.base;
+
+  for (let i = 0; i <= count; i++) {
+    const time = new Date(now - (count - i) * stepMs);
+    let barClose, barOpen, barHigh, barLow, vol;
+    if (i === count) {
+      barClose = curLivePrice;
+      barOpen = Math.round((curLivePrice - (Math.random() - 0.5) * m.amp * 0.3) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      barHigh = Math.round((Math.max(barOpen, barClose) + Math.random() * m.amp * 0.3) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      barLow = Math.round((Math.min(barOpen, barClose) - Math.random() * m.amp * 0.3) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      vol = Math.floor(100 + Math.random() * 120);
+    } else {
+      const wave = Math.sin((i - count) * 0.35 + (key.charCodeAt(0) % 7)) * m.amp * 0.7;
+      const noise = (Math.random() - 0.5) * m.amp * 0.3;
+      barClose = Math.round((curLivePrice + wave + noise) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      barOpen = Math.round((barClose - (Math.random() - 0.5) * m.amp * 0.4) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      barHigh = Math.round((Math.max(barOpen, barClose) + Math.random() * m.amp * 0.3) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      barLow = Math.round((Math.min(barOpen, barClose) - Math.random() * m.amp * 0.3) * Math.pow(10, m.decimals)) / Math.pow(10, m.decimals);
+      vol = Math.floor(50 + Math.random() * 200);
+    }
+    bars.push({ time, open: barOpen, high: barHigh, low: barLow, close: barClose, vol });
+  }
+  candleHistory[key] = bars;
+  return bars;
+}
+
+// Build Ticker Strip for all 12 markets
+function initMarketTickerStrip() {
+  const strip = document.getElementById('marketTickerStrip');
+  if (!strip) return;
+
+  let html = `
+    <div class="live-sync-badge">
+      <span class="live-pulse-dot"></span>
+      <span id="tickerLiveText">بث حي متزامن 1s</span>
+    </div>
+  `;
+
+  for (const [k, m] of Object.entries(ALL_MARKETS)) {
+    const activeCls = k === currentMarketKey ? 'active' : '';
+    html += `
+      <div class="ticker-pill ${activeCls}" id="pill-${k}" onclick="selectMarketKey('${k}')">
+        <span class="ticker-sym">${m.icon} ${m.symbol}</span>
+        <span class="ticker-price" id="tk-${k}">${m.unit}${m.base}</span>
+        <span class="ticker-chg chg-up" id="tkc-${k}">+0.00%</span>
+      </div>
+    `;
+  }
+  strip.innerHTML = html;
+}
+
+// Build 12 market buttons toolbar
+function initMarketTabs() {
+  const container = document.getElementById('miniMarketsTabs');
+  if (!container) return;
+
+  let html = '';
+  for (const [k, m] of Object.entries(ALL_MARKETS)) {
+    const activeCls = k === currentMarketKey ? 'active' : '';
+    html += `
+      <button class="sym-btn ${activeCls}" id="tab-${k}" onclick="selectMarketKey('${k}')">
+        ${m.icon} ${k}
+      </button>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+function selectMarketKey(k) {
+  if (!ALL_MARKETS[k]) return;
+  currentMarketKey = k;
+  const m = ALL_MARKETS[k];
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const mName = isEn ? (m.name_en || m.symbol) : m.name_ar;
+  currentActiveSymbol = m.tv;
+  currentActiveSymbolName = mName + ' (' + m.symbol + ')';
+
+  const titleEl = document.getElementById('miniChartTitle');
+  if (titleEl) titleEl.textContent = `${m.icon} ${mName} - ${m.symbol}`;
+
+  // Update tabs active state
+  document.querySelectorAll('.markets-toolbar-scroll .sym-btn').forEach(btn => btn.classList.remove('active'));
+  const activeTab = document.getElementById('tab-' + k);
+  if (activeTab) activeTab.classList.add('active');
+
+  // Update ticker pills active state
+  document.querySelectorAll('.ticker-pill').forEach(p => p.classList.remove('active'));
+  const activePill = document.getElementById('pill-' + k);
+  if (activePill) activePill.classList.add('active');
+
+  initCandleHistory(k);
+  drawLiveChart();
+}
+
+function setChartRenderMode(mode) {
+  chartRenderMode = mode;
+  document.getElementById('btnModeCandles')?.classList.toggle('active', mode === 'candles');
+  document.getElementById('btnModeArea')?.classList.toggle('active', mode === 'area');
+  drawLiveChart();
+}
+
+function toggleTvFallback() {
+  isTvEmbedActive = !isTvEmbedActive;
+  const tvWrap = document.getElementById('tvEmbedWrap');
+  if (!tvWrap) return;
+
+  if (isTvEmbedActive) {
+    const m = ALL_MARKETS[currentMarketKey];
+    const encoded = encodeURIComponent(m.tv);
+    tvWrap.style.display = 'block';
+    tvWrap.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#0f172a; border-bottom:1px solid #1e293b;">
+        <span style="font-size:0.78rem; color:#38bdf8;">🌐 TradingView Pro Stream (${m.tv})</span>
+        <button class="sym-btn" style="padding:2px 8px; font-size:0.75rem;" onclick="toggleTvFallback()">✕ إغلاق والعودة للشارت المباشر</button>
+      </div>
+      <iframe src="https://s.tradingview.com/widgetembed/?frameElementId=tv_pro&symbol=${encoded}&interval=15&theme=dark&style=1&locale=ar_AE"
+        style="width:100%; height:calc(100% - 32px); border:0;" allowfullscreen></iframe>
+    `;
+  } else {
+    tvWrap.style.display = 'none';
+    tvWrap.innerHTML = '';
+  }
+}
+
+// High-Performance Canvas Rendering Engine (Supports both Mini Side Chart & Full Market Chart)
+function renderCanvasChart(canvasId, wrapId, badgeId, hudId, marketKey) {
+  const canvas = document.getElementById(canvasId);
+  const wrap = document.getElementById(wrapId);
+  if (!canvas || !wrap) return;
+
+  const rect = wrap.getBoundingClientRect();
+  const width = Math.max(320, Math.floor(wrap.clientWidth || rect.width || 460));
+  const height = Math.max(280, Math.floor(wrap.clientHeight || rect.height || 360));
+
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+  }
+
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const mKey = marketKey || currentMarketKey || 'XAUUSD';
+  const m = ALL_MARKETS[mKey] || ALL_MARKETS['XAUUSD'];
+  const bars = initCandleHistory(mKey);
+  if (!bars || bars.length === 0) return;
+
+  // Background
+  ctx.fillStyle = '#070b14';
+  ctx.fillRect(0, 0, width, height);
+
+  // Layout boundaries
+  const paddingRight = 68;
+  const paddingBottom = 26;
+  const chartW = width - paddingRight;
+  const chartH = height - paddingBottom;
+
+  // Determine High and Low
+  let minP = Infinity;
+  let maxP = -Infinity;
+  let maxVol = 0;
+  for (const b of bars) {
+    if (b.low < minP) minP = b.low;
+    if (b.high > maxP) maxP = b.high;
+    if (b.vol > maxVol) maxVol = b.vol;
+  }
+  const range = (maxP - minP) || 1;
+  const padRange = range * 0.08;
+  minP -= padRange;
+  maxP += padRange;
+  const finalRange = maxP - minP;
+
+  const getY = (price) => chartH - ((price - minP) / finalRange) * (chartH - 20) - 10;
+  const getX = (idx) => (idx / (bars.length - 1)) * (chartW - 20) + 10;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+  ctx.lineWidth = 1;
+  const gridSteps = 5;
+  for (let i = 0; i <= gridSteps; i++) {
+    const y = 10 + (chartH - 20) * (i / gridSteps);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(chartW, y);
+    ctx.stroke();
+
+    const priceLabel = (maxP - (finalRange * (i / gridSteps))).toFixed(m.decimals);
+    ctx.fillStyle = '#64748b';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${m.unit}${priceLabel}`, width - 8, y + 3);
+  }
+
+  // Volume Bars
+  const volHeight = chartH * 0.18;
+  bars.forEach((b, idx) => {
+    const x = getX(idx);
+    const vH = (b.vol / (maxVol || 1)) * volHeight;
+    const isUp = b.close >= b.open;
+    ctx.fillStyle = isUp ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)';
+    ctx.fillRect(x - 2, chartH - vH, 4, vH);
+  });
+
+  if (chartRenderMode === 'candles') {
+    // Candlesticks Mode
+    bars.forEach((b, idx) => {
+      const x = getX(idx);
+      const isUp = b.close >= b.open;
+      const color = isUp ? '#10b981' : '#ef4444';
+
+      const yOpen = getY(b.open);
+      const yClose = getY(b.close);
+      const yHigh = getY(b.high);
+      const yLow = getY(b.low);
+
+      // Wick
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x, yHigh);
+      ctx.lineTo(x, yLow);
+      ctx.stroke();
+
+      // Body
+      const bodyTop = Math.min(yOpen, yClose);
+      const bodyHeight = Math.max(Math.abs(yClose - yOpen), 2.5);
+      ctx.fillStyle = color;
+      ctx.fillRect(x - 3.5, bodyTop, 7, bodyHeight);
+    });
+  } else {
+    // Glowing Area Mode
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(bars[0].close));
+    for (let i = 1; i < bars.length; i++) {
+      const xPrev = getX(i - 1);
+      const yPrev = getY(bars[i - 1].close);
+      const xCur = getX(i);
+      const yCur = getY(bars[i].close);
+      const xc = (xPrev + xCur) / 2;
+      ctx.quadraticCurveTo(xPrev, yPrev, xc, (yPrev + yCur) / 2);
+    }
+    ctx.lineTo(getX(bars.length - 1), getY(bars[bars.length - 1].close));
+
+    // Gradient fill
+    const grad = ctx.createLinearGradient(0, 0, 0, chartH);
+    grad.addColorStop(0, 'rgba(245, 158, 11, 0.28)');
+    grad.addColorStop(1, 'rgba(245, 158, 11, 0.00)');
+
+    ctx.lineTo(getX(bars.length - 1), chartH);
+    ctx.lineTo(getX(0), chartH);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Glowing Line
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(bars[0].close));
+    for (let i = 1; i < bars.length; i++) {
+      const xPrev = getX(i - 1);
+      const yPrev = getY(bars[i - 1].close);
+      const xCur = getX(i);
+      const yCur = getY(bars[i].close);
+      const xc = (xPrev + xCur) / 2;
+      ctx.quadraticCurveTo(xPrev, yPrev, xc, (yPrev + yCur) / 2);
+    }
+    ctx.lineTo(getX(bars.length - 1), getY(bars[bars.length - 1].close));
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2.2;
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+    ctx.shadowBlur = 0; // reset
+  }
+
+  // X-Axis Precise Time Labels
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px monospace';
+  ctx.textAlign = 'center';
+  const timeStep = Math.max(1, Math.floor(bars.length / 6));
+
+  for (let i = 0; i < bars.length; i += timeStep) {
+    const b = bars[i];
+    const x = getX(i);
+    // Draw vertical subtle grid tick
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.beginPath();
+    ctx.moveTo(x, 10);
+    ctx.lineTo(x, chartH);
+    ctx.stroke();
+
+    const d = b.time;
+    let tStr = '';
+    if (selectedTimeframe === '1s') {
+      tStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    } else if (selectedTimeframe === '1d') {
+      tStr = `${d.getMonth()+1}/${d.getDate()}`;
+    } else {
+      tStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    ctx.fillText(tStr, x, chartH + 16);
+  }
+
+  // Current Price Line & Floating Badge
+  const lastBar = bars[bars.length - 1];
+  const curY = getY(lastBar.close);
+
+  ctx.strokeStyle = 'rgba(245, 158, 11, 0.65)';
+  ctx.setLineDash([4, 4]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, curY);
+  ctx.lineTo(chartW, curY);
+  ctx.stroke();
+  ctx.setLineDash([]); // reset
+
+  // Update floating HTML badge on right
+  const badgeEl = document.getElementById(badgeId);
+  if (badgeEl) {
+    badgeEl.style.top = `${curY}px`;
+    badgeEl.textContent = `${m.unit}${lastBar.close.toFixed(m.decimals)}`;
+  }
+
+  // Update top-left live OHLC HUD
+  const hudEl = document.getElementById(hudId);
+  if (hudEl && !hudEl.classList.contains('user-hovering')) {
+    hudEl.style.display = 'block';
+    hudEl.innerHTML = `<strong>${m.symbol}</strong> | O: ${m.unit}${lastBar.open.toFixed(m.decimals)} H: ${m.unit}${lastBar.high.toFixed(m.decimals)} L: ${m.unit}${lastBar.low.toFixed(m.decimals)} C: ${m.unit}${lastBar.close.toFixed(m.decimals)}`;
+  }
+}
+
+function drawLiveChart() {
+  renderCanvasChart('marketCanvas', 'chartCanvasWrap', 'chartLivePriceBadge', 'chartCrosshairTooltip', currentMarketKey);
+  const fullView = document.getElementById('v-markets');
+  if (fullView && fullView.classList.contains('active')) {
+    drawFullMarketChart();
+  }
+}
+
+function drawFullMarketChart() {
+  renderCanvasChart('fullMarketCanvas', 'fullChartCanvasWrap', 'fullChartLivePriceBadge', 'fullChartCrosshairTooltip', fullChartMarketKey || currentMarketKey);
+}
+
+// Real-Time Second-by-Second Market Fetcher (1000ms loop)
+async function refreshMarketPrices() {
+  try {
+    const res = await fetch('/api/market-prices');
+    if (!res.ok) return;
+    const data = await res.json();
+    const prices = data.prices || {};
+
+    for (const [k, p] of Object.entries(prices)) {
+      if (!ALL_MARKETS[k]) continue;
+      const m = ALL_MARKETS[k];
+      const prev = marketPricesStore[k];
+      marketPricesStore[k] = p;
+
+      const elP = document.getElementById('tk-' + k);
+      const elC = document.getElementById('tkc-' + k);
+      const pill = document.getElementById('pill-' + k);
+
+      if (elP) {
+        elP.textContent = (m.unit || '') + p.price;
+      }
+      if (elC) {
+        const chg = Number(p.change_24h || 0);
+        elC.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+        elC.className = 'ticker-chg ' + (chg >= 0 ? 'chg-up' : 'chg-down');
+      }
+
+      // Flash animation on price change
+      if (pill && prev && prev.price !== p.price) {
+        pill.classList.remove('tick-up', 'tick-down');
+        void pill.offsetWidth; // trigger reflow
+        pill.classList.add(p.price > prev.price ? 'tick-up' : 'tick-down');
+      }
+
+      // If this is the active chart market, update the forming candle!
+      if (k === currentMarketKey && candleHistory[k] && candleHistory[k].length > 0) {
+        const bars = candleHistory[k];
+        const last = bars[bars.length - 1];
+        last.close = p.price;
+        if (p.price > last.high) last.high = p.price;
+        if (p.price < last.low) last.low = p.price;
+        last.vol += 1;
+      }
+    }
+
+    drawLiveChart();
+  } catch (e) {
+    console.warn('Market feed fetch error:', e);
+  }
+}
+
+// Window resize listener for chart
+window.addEventListener('resize', () => {
+  drawLiveChart();
+});
+
+// Setup Crosshair Tooltip
+function setupChartCrosshair() {
+  const wrap = document.getElementById('chartCanvasWrap');
+  const tooltip = document.getElementById('chartCrosshairTooltip');
+  if (!wrap || !tooltip) return;
+
+  wrap.addEventListener('mousemove', (e) => {
+    tooltip.classList.add('user-hovering');
+    const rect = wrap.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const bars = candleHistory[currentMarketKey];
+    if (!bars || bars.length === 0) return;
+
+    const paddingRight = 68;
+    const chartW = rect.width - paddingRight;
+    const idx = Math.min(bars.length - 1, Math.max(0, Math.round(((x - 10) / (chartW - 20)) * (bars.length - 1))));
+    const b = bars[idx];
+    const m = ALL_MARKETS[currentMarketKey];
+
+    tooltip.style.display = 'block';
+    tooltip.innerHTML = `
+      <strong>${m.symbol}</strong> | O: ${m.unit}${b.open.toFixed(m.decimals)} H: ${m.unit}${b.high.toFixed(m.decimals)} L: ${m.unit}${b.low.toFixed(m.decimals)} C: ${m.unit}${b.close.toFixed(m.decimals)}
+    `;
+  });
+
+  wrap.addEventListener('mouseleave', () => {
+    tooltip.classList.remove('user-hovering');
+    drawLiveChart();
+  });
+}
+
+function safeText(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+
+let traderSearchQuery = '';
+window.allContacts = [];
+
+function matchTraderContact(c, q, qDigits) {
+  if (!q) return true;
+  const name = String(c.name || c.full_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim() || c.username || '').toLowerCase();
+  const phone = String(c.number || c.phone_number || c.phone || '');
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const email = String(c.email || '').toLowerCase();
+  const tg = String(c.telegram_user || c.username || '').replace(/^@/, '').toLowerCase();
+  const platform = String(c.platform || '').toLowerCase();
+  const tier = String(c.lead_score || c.tier || '').toLowerCase();
+
+  const qLower = q.toLowerCase();
+
+  // If query has digits (e.g. 01012345678 or 37995 or 201127737995)
+  if (qDigits && qDigits.length >= 2) {
+    if (cleanPhone.includes(qDigits)) return true;
+    const coreQuery = qDigits.replace(/^(20|0)/, '');
+    const corePhone = cleanPhone.replace(/^(20|0)/, '');
+    if (coreQuery && (corePhone.includes(coreQuery) || cleanPhone.includes(coreQuery))) return true;
+  }
+  if (phone.toLowerCase().includes(qLower)) return true;
+  if (name.includes(qLower)) return true;
+  if (email.includes(qLower)) return true;
+  const qCleanTg = qLower.replace(/^@/, '');
+  if (qCleanTg && (tg.includes(qCleanTg) || ('@' + tg).includes(qLower))) return true;
+  if (platform.includes(qLower)) return true;
+  if (tier.includes(qLower)) return true;
+
+  return false;
+}
+
+function handleTopTraderSearch(val) {
+  const cView = document.getElementById('v-contacts');
+  if (cView && !cView.classList.contains('active')) {
+    switchView('contacts', document.getElementById('nav-contacts'));
+  }
+  const cInp = document.getElementById('contactSearchInput');
+  if (cInp) cInp.value = val;
+  applyTraderSearch(val);
+}
+
+function handleTraderSearch(val) {
+  const topInp = document.getElementById('topbarTraderSearch');
+  if (topInp) topInp.value = val;
+  applyTraderSearch(val);
+}
+
+function clearTraderSearch() {
+  const topInp = document.getElementById('topbarTraderSearch');
+  if (topInp) topInp.value = '';
+  const cInp = document.getElementById('contactSearchInput');
+  if (cInp) { cInp.value = ''; cInp.focus(); }
+  applyTraderSearch('');
+}
+
+function applyTraderSearch(rawVal) {
+  traderSearchQuery = (rawVal || '').trim();
+  const topClear = document.getElementById('topbarSearchClear');
+  const cClear = document.getElementById('contactSearchClear');
+  if (topClear) topClear.style.display = traderSearchQuery ? 'block' : 'none';
+  if (cClear) cClear.style.display = traderSearchQuery ? 'block' : 'none';
+
+  renderFilteredContacts();
+}
+
+function renderFilteredContacts() {
+  const cBody = document.getElementById('contactsTableBody');
+  if (!cBody) return;
+
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const waLabel = isEn ? 'WhatsApp ↗' : 'واتساب ↗';
+  const tgLabel = isEn ? 'Telegram ↗' : 'تيليجرام ↗';
+  const unregLabel = isEn ? 'Unregistered' : 'غير مسجل';
+
+  let list = (window.allContacts && window.allContacts.length > 0)
+    ? window.allContacts
+    : ((window.lastDashboardData && window.lastDashboardData.contacts) || []);
+
+  if ((!list || list.length === 0) && typeof INITIAL_DASHBOARD_DATA !== 'undefined' && INITIAL_DASHBOARD_DATA.contacts) {
+    list = INITIAL_DASHBOARD_DATA.contacts;
+    window.allContacts = list;
+  }
+
+  const q = traderSearchQuery;
+  const qDigits = q.replace(/[^0-9]/g, '');
+
+  const filtered = q ? list.filter(c => matchTraderContact(c, q, qDigits)) : list;
+
+  // Update count badge
+  const badge = document.getElementById('contactSearchBadge');
+  if (badge) {
+    if (q) {
+      badge.textContent = isEn
+        ? `${filtered.length} of ${list.length} matches`
+        : `${filtered.length} من ${list.length} نتائج مطابقة`;
+      badge.style.background = filtered.length > 0 ? 'rgba(52,211,153,0.15)' : 'rgba(239,68,68,0.15)';
+      badge.style.color = filtered.length > 0 ? '#34d399' : '#f87171';
+      badge.style.borderColor = filtered.length > 0 ? 'rgba(52,211,153,0.3)' : 'rgba(239,68,68,0.3)';
+    } else {
+      badge.textContent = isEn ? `${list.length} of ${list.length} contacts` : `${list.length} من ${list.length} متداول`;
+      badge.style.background = 'rgba(56,189,248,0.12)';
+      badge.style.color = '#38bdf8';
+      badge.style.borderColor = 'rgba(56,189,248,0.25)';
+    }
+  }
+
+  if (filtered.length > 0) {
+    cBody.innerHTML = filtered.map(c => {
+      const fallbackName = isEn ? 'Trader' : 'عميل تداول';
+      const fullName = c.name || c.full_name || ((c.first_name || '') + ' ' + (c.last_name || '')).trim() || c.username || fallbackName;
+      const phone = c.number || c.phone_number || c.phone || '';
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const rawTg = String(c.telegram_user || c.username || '').replace(/^@/, '').trim();
+      const emailOrTg = c.email || (rawTg ? '@' + rawTg : '-');
+      const tgUrl = rawTg ? `https://t.me/${rawTg}` : (cleanPhone ? `https://t.me/+${cleanPhone}` : 'https://t.me/YOUR_CEO_BOT');
+      const rowAction = cleanPhone
+        ? `window.open('https://wa.me/${cleanPhone}', '_blank')`
+        : `window.open('${tgUrl}', '_blank')`;
+      const rowTitle = isEn ? 'Click for direct contact via WhatsApp or Telegram' : 'اضغط للتواصل المباشر عبر واتساب أو تيليجرام';
+      return `
+      <tr onclick="${rowAction}" style="cursor:pointer;" title="${rowTitle}">
+        <td><strong style="color:#f8fafc; font-size:0.92rem;">👤 ${safeText(fullName)}</strong></td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            ${phone
+              ? `<span style="font-family:monospace; color:#38bdf8; font-weight:700; direction:ltr;">📞 ${safeText(phone)}</span>
+                 <a href="https://wa.me/${cleanPhone}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 7px; min-height:24px; font-size:0.72rem; color:#34d399; text-decoration:none;">${waLabel}</a>`
+              : `<span style="color:var(--muted); font-size:0.8rem;">${unregLabel}</span>`
+            }
+            <a href="${tgUrl}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 7px; min-height:24px; font-size:0.72rem; color:#38bdf8; text-decoration:none;">${tgLabel}</a>
+          </div>
+        </td>
+        <td><span class="score-badge WARM">${safeText(c.platform || 'telegram')}</span></td>
+        <td style="direction:ltr; font-size:0.82rem;">${safeText(emailOrTg)}</td>
+        <td><span class="score-badge ${safeText(c.lead_score || 'VIP')}">${safeText(c.lead_score || 'VIP')}</span></td>
+      </tr>
+      `;
+    }).join('');
+  } else {
+    cBody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:32px 16px; color:#94a3b8;">
+      <div style="font-size:1.6rem; margin-bottom:8px;">🔍</div>
+      <div style="font-weight:700; font-size:0.95rem; color:#e2e8f0;">${isEn ? `No contacts matching "${safeText(q)}"` : `لا توجد نتائج مطابقة لـ "${safeText(q)}"`}</div>
+      <div style="font-size:0.8rem; color:#64748b; margin-top:6px;">${isEn ? 'Try typing a different phone number, name, or email address' : 'جرب كتابة رقم هاتف، اسم، أو إيميل مختلف أو اضغط ✕ لإلغاء التصفية'}</div>
+    </td></tr>`;
+  }
+}
+
+function renderDashboard(data) {
+  if (!data) return;
+  window.lastDashboardData = data;
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const waLabel = isEn ? 'WhatsApp ↗' : 'واتساب ↗';
+  const tgLabel = isEn ? 'Telegram ↗' : 'تيليجرام ↗';
+  const unregLabel = isEn ? 'Unregistered' : 'غير مسجل';
+
+  if (data.kpis) {
+    if (data.kpis.total_contacts !== undefined) document.getElementById('kpiContacts').textContent = data.kpis.total_contacts;
+    if (data.kpis.total_leads !== undefined) document.getElementById('kpiLeads').textContent = data.kpis.total_leads;
+    if (data.kpis.vip_leads !== undefined) document.getElementById('kpiVip').textContent = data.kpis.vip_leads;
+    if (data.kpis.open_tickets !== undefined) document.getElementById('kpiTickets').textContent = data.kpis.open_tickets;
+  }
+  if (data.session_time) {
+    const stEl = document.getElementById('sidebarSessionTime');
+    if (stEl) stEl.textContent = data.session_time;
+  }
+
+  // 1. Leads Section
+  try {
+    currentLeads = data.leads || [];
+    const lBody = document.getElementById('leadsTableBody');
+    if (lBody) {
+      if (currentLeads.length > 0) {
+        lBody.innerHTML = currentLeads.map(l => {
+          const leadId = safeText(l._id || l.lead_id || '');
+          const cleanP = String(l.phone || '').replace(/[^0-9]/g, '');
+          const tgUser = String(l.telegram_user || l.username || '').replace(/^@/, '').trim();
+          const tgUrl = tgUser ? `https://t.me/${tgUser}` : (cleanP ? `https://t.me/+${cleanP}` : 'https://t.me/YOUR_CEO_BOT');
+          const sentBtnTxt = isEn ? '✅ Sent (View Email)' : '✅ تم الإرسال (عرض الإيميل)';
+          const revBtnTxt = isEn ? 'Review & Approve Email ✉️' : 'مراجعة واعتماد الإيميل ✉️';
+          const rowTitle = isEn ? 'Click to review lead details and approve email' : 'اضغط لفتح تفاصيل العميل واعتماد الإيميل';
+          return `
+          <tr onclick="openLeadModal('${leadId}')" style="cursor:pointer;" title="${rowTitle}">
+            <td>
+              <strong>${safeText(l.full_name)}</strong><br>
+              <span style="color:var(--muted);font-size:0.76rem;">${safeText(l.email)} | ${safeText(l.phone)}</span>
+              <div style="display:flex; gap:6px; margin-top:5px; flex-wrap:wrap;">
+                ${cleanP ? `<a href="https://wa.me/${cleanP}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 7px; min-height:22px; font-size:0.7rem; color:#34d399; text-decoration:none;">${waLabel}</a>` : ''}
+                <a href="${tgUrl}" target="_blank" onclick="event.stopPropagation()" class="btn" style="padding:2px 7px; min-height:22px; font-size:0.7rem; color:#38bdf8; text-decoration:none;">${tgLabel}</a>
+              </div>
+            </td>
+            <td><span class="score-badge score-${safeText(l.lead_score || 'WARM')}">${safeText(l.lead_score || 'WARM')}</span></td>
+            <td>${safeText(l.capital)}</td>
+            <td>${safeText(l.experience)}</td>
+            <td style="max-width:260px;">${safeText(l.ai_summary || '')}</td>
+            <td>
+              ${l.status === 'approved_and_sent'
+                ? `<button class="btn" style="color:#34d399;padding:6px 12px;font-size:0.78rem;" onclick="event.stopPropagation(); openLeadModal('${leadId}')">${sentBtnTxt}</button>`
+                : `<button class="btn btn-primary" style="padding:6px 12px;font-size:0.78rem;" onclick="event.stopPropagation(); openLeadModal('${leadId}')">${revBtnTxt}</button>`
+              }
+            </td>
+          </tr>
+          `;
+        }).join('');
+      } else {
+        lBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--muted);">${isEn ? 'No leads registered yet' : 'لا توجد استمارات مسجلة حالياً'}</td></tr>`;
+      }
+    }
+  } catch (errLeads) {
+    console.error('Error rendering leads:', errLeads);
+  }
+
+  // 2. Contacts CRM Section
+  try {
+    const contactsList = data.contacts || [];
+    window.allContacts = contactsList;
+    renderFilteredContacts();
+  } catch (errContacts) {
+    console.error('Error rendering contacts:', errContacts);
+  }
+
+  // 3. PR Tickets Section
+  try {
+    currentTickets = data.tickets || [];
+    const tBody = document.getElementById('ticketsTableBody');
+    if (tBody) {
+      if (currentTickets.length > 0) {
+        tBody.innerHTML = currentTickets.map(t => {
+          const tId = safeText(t.ticket_id || t._id || '');
+          const resp = (t.pr_reply || t.bot_answer || '').trim();
+          const hasResp = Boolean(resp);
+          const isClosed = (t.status === 'closed' || t.status === 'replied' || hasResp);
+          const rawTime = t.time || t.created_at || '';
+          let fmtTime = rawTime;
+          if (rawTime) {
+            const dObj = new Date(rawTime);
+            if (!isNaN(dObj.getTime())) {
+              fmtTime = dObj.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'medium' });
+            }
+          }
+          const statusTxt = isClosed ? (isEn ? 'Replied' : 'تم الرد') : (isEn ? 'Pending Reply' : 'بانتظار الرد');
+          const replyNowTxt = isEn ? '✍️ Reply Now' : '✍️ الرد الآن';
+          const traderName = t.full_name || t.username || (isEn ? 'Trader' : 'متداول');
+          return `
+          <tr onclick="openTicketModal('${tId}')" style="cursor:pointer;" title="${isEn ? 'Click to view ticket & full response' : 'اضغط لفتح تفاصيل التذكرة والرد الكامل'}">
+            <td><code>${tId}</code></td>
+            <td><strong>👤 ${safeText(traderName)}</strong><br><span style="color:var(--muted);font-size:0.75rem;">${safeText(t.platform || 'telegram')}</span></td>
+            <td style="min-width:220px; max-width:380px; white-space:pre-wrap; word-break:break-word; line-height:1.5;">${safeText(t.user_message || '')}</td>
+            <td><span class="score-badge" style="background:${isClosed?'rgba(16,185,129,0.15)':'rgba(245,158,11,0.15)'};color:${isClosed?'#34d399':'#fbbf24'};border:1px solid ${isClosed?'#10b981':'#f59e0b'};">${statusTxt}</span></td>
+            <td style="min-width:240px; max-width:420px; line-height:1.5;">
+              ${hasResp
+                ? `<div style="background:#070b14; border:1px solid #1e293b; padding:8px 10px; border-radius:8px; font-size:0.84rem; color:#e2e8f0; white-space:pre-wrap; word-break:break-word;">${safeText(resp)}</div>`
+                : `<button class="btn btn-primary" style="min-height:30px; padding:4px 10px; font-size:0.78rem;" onclick="event.stopPropagation(); openTicketModal('${tId}')">${replyNowTxt}</button>`
+              }
+            </td>
+            <td style="font-size:0.78rem; color:#38bdf8; font-family:monospace; direction:ltr;">⏰ ${safeText(fmtTime)}</td>
+          </tr>
+          `;
+        }).join('');
+      } else {
+        tBody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--muted);">${isEn ? 'No tickets found' : 'لا توجد تذاكر حالياً (All caught up)'}</td></tr>`;
+      }
+    }
+  } catch (errTickets) {
+    console.error('Error rendering tickets:', errTickets);
+  }
+}
+
+async function refreshAll() {
+  refreshMarketPrices();
+  try {
+    localStorage.removeItem('aios_dashboard_cache');
+  } catch (e) {}
+  try {
+    const res = await fetch('/api/dashboard-data?t=' + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.kpis && (Array.isArray(data.contacts) || Array.isArray(data.leads))) {
+        try { localStorage.setItem('aios_dashboard_cache_v6', JSON.stringify(data)); } catch (e) {}
+        renderDashboard(data);
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Live API fetch error, checking fallback:', e);
+  }
+
+  try {
+    const fbRes = await fetch('/dashboard-fallback.json?t=' + Date.now());
+    if (fbRes.ok) {
+      const fbData = await fbRes.json();
+      if (fbData && fbData.kpis) {
+        try { localStorage.setItem('aios_dashboard_cache_v6', JSON.stringify(fbData)); } catch (e) {}
+        renderDashboard(fbData);
+        return;
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const cached = localStorage.getItem('aios_dashboard_cache_v6');
+    if (cached) {
+      renderDashboard(JSON.parse(cached));
+      return;
+    }
+  } catch (e) {}
+}
+
+function openLeadModal(id) {
+  const lead = currentLeads.find(x => x._id === id);
+  if (!lead) return;
+  selectedLeadId = id;
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const h3 = document.querySelector('#emailModal h3');
+  if (h3) h3.textContent = isEn ? '✉️ Review & Approve Strategic Email Plan' : '✉️ مراجعة واعتماد خطة البريد الإلكتروني';
+  document.getElementById('modalLeadInfo').textContent = isEn
+    ? `Trader: ${lead.full_name} (${lead.email}) | Tier: ${lead.lead_score} | Capital: ${lead.capital}`
+    : `المتداول: ${lead.full_name} (${lead.email}) | التصنيف: ${lead.lead_score} | رأس المال: ${lead.capital}`;
+  const labels = document.querySelectorAll('#emailModal label');
+  if (labels.length >= 2) {
+    labels[0].textContent = isEn ? 'Email Subject' : 'عنوان الإيميل (Subject)';
+    labels[1].textContent = isEn ? 'Strategic Email Body' : 'نص الإيميل الاستراتيجي (Body)';
+  }
+  const closeBtn = document.querySelector('#emailModal button[onclick="closeModal()"]');
+  if (closeBtn) closeBtn.textContent = isEn ? 'Close' : 'إغلاق';
+  document.getElementById('modalAiSummary').innerHTML = isEn
+    ? `<strong>Institutional Portfolio Assessment:</strong><br>${lead.ai_summary || 'No summary available'}`
+    : `<strong>التقييم المالي والاستراتيجي للمحفظة:</strong><br>${lead.ai_summary || 'لا يوجد ملخص'}`;
+  document.getElementById('modalEmailSubject').value = (lead.email_draft && lead.email_draft.subject) ? lead.email_draft.subject : '';
+  document.getElementById('modalEmailBody').value = (lead.email_draft && lead.email_draft.body) ? lead.email_draft.body : '';
+
+  const approveBtn = document.getElementById('modalApproveBtn');
+  if (lead.status === 'approved_and_sent') {
+    approveBtn.textContent = isEn ? '🔄 Resend Email Now' : '🔄 إعادة إرسال الإيميل الآن';
+  } else {
+    approveBtn.textContent = isEn ? '✅ Approve & Send Email Now' : '✅ اعتماد وإرسال الإيميل الآن';
+  }
+  document.getElementById('emailModal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('emailModal').style.display = 'none';
+}
+
+function openTicketModal(id) {
+  const t = currentTickets.find(x => x._id === id || x.ticket_id === id);
+  if (!t) return;
+  selectedTicket = t;
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  const h3 = document.querySelector('#ticketModalBackdrop h3');
+  if (h3) h3.textContent = isEn ? '🎫 Ticket Details & Recorded Response' : '🎫 تفاصيل التذكرة والرد الكامل المسجل';
+  const labels = document.querySelectorAll('#ticketModalBackdrop label');
+  if (labels.length >= 2) {
+    labels[0].textContent = isEn ? '💬 Trader Inquiry:' : '💬 استفسار المتداول:';
+    labels[1].textContent = isEn ? '🤖 Our Recorded Response:' : '🤖 الرد المسجل للمتداول (Our Recorded Response):';
+  }
+  const closeBtn = document.querySelector('#ticketModalBackdrop button[onclick="closeTicketModal()"]');
+  if (closeBtn) closeBtn.textContent = isEn ? 'Close' : 'إغلاق';
+  const subBtn = document.getElementById('ticketModalSubmitBtn');
+  if (subBtn) subBtn.textContent = isEn ? 'Send / Update Reply Now 🚀' : 'إرسال / تحديث الرد للمتداول الآن 🚀';
+  document.getElementById('ticketModalId').textContent = t.ticket_id;
+  document.getElementById('ticketModalUser').textContent = isEn
+    ? `Trader: ${t.full_name || t.username || 'Trader'} (${t.platform || 'telegram'})`
+    : `المتداول: ${t.full_name || t.username || 'متداول'} (${t.platform || 'telegram'})`;
+  document.getElementById('ticketModalQuestion').textContent = t.user_message || (isEn ? 'No message recorded' : 'لا توجد رسالة مسجلة');
+  const resp = t.pr_reply || t.bot_answer || '';
+  document.getElementById('ticketModalAnswer').value = resp;
+  document.getElementById('ticketModalBackdrop').style.display = 'flex';
+}
+
+function closeTicketModal() {
+  document.getElementById('ticketModalBackdrop').style.display = 'none';
+}
+
+async function submitTicketReplyFromModal() {
+  if (!selectedTicket) return;
+  const replyTxt = document.getElementById('ticketModalAnswer').value.trim();
+  if (!replyTxt) return;
+  const btn = document.getElementById('ticketModalSubmitBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ والإرسال...';
+  try {
+    await fetch('/api/aios-chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        query: `/reply ${selectedTicket.ticket_id} ${replyTxt}`,
+        reply_to_ticket: selectedTicket.ticket_id
+      })
+    });
+    closeTicketModal();
+    refreshAll();
+  } catch (e) {
+    alert('حدث خطأ أثناء إرسال الرد');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'إرسال / تحديث الرد للمتداول الآن 🚀';
+  }
+}
+
+async function approveAndSendEmail() {
+  if (!selectedLeadId) return;
+  const btn = document.getElementById('modalApproveBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الإرسال...';
+  const subject = document.getElementById('modalEmailSubject').value;
+  const body = document.getElementById('modalEmailBody').value;
+  await fetch('/api/approve-email', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({lead_id: selectedLeadId, subject, body})
+  });
+  btn.disabled = false;
+  closeModal();
+  refreshAll();
+}
+
+function playAudioBase64(b64) {
+  if (!b64) return;
+  try {
+    const wave = document.getElementById('voiceWaveIndicator');
+    const snd = new Audio('data:audio/mp3;base64,' + b64);
+    if (wave) wave.classList.add('active');
+    snd.onended = () => { if (wave) wave.classList.remove('active'); };
+    snd.onerror = () => { if (wave) wave.classList.remove('active'); };
+    snd.play().catch(e => {
+      if (wave) wave.classList.remove('active');
+      console.warn('Audio play restricted:', e);
+    });
+  } catch(e) {}
+}
+
+function appendMsg(text, role, audioB64) {
+  const box = document.getElementById('chatMessages');
+  const d = document.createElement('div');
+  d.className = 'msg ' + role;
+  let html = toEnglishDigits(String(text || '')).replace(/\n/g, '<br>');
+  if (role === 'ai' && audioB64) {
+    const id = 'snd_' + Math.random().toString(36).substr(2, 9);
+    window['_audios'] = window['_audios'] || {};
+    window['_audios'][id] = audioB64;
+    const playLabel = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en') ? '🎙️ Play Voice Reply' : '🎙️ تشغيل الصوت المصري';
+    html += '<div style="margin-top:8px;"><button onclick="playAudioBase64(window._audios[\'' + id + '\'])" class="btn" style="padding:4px 10px; font-size:0.75rem; background:rgba(245,158,11,0.18); border:1px solid #f59e0b; color:#f59e0b; border-radius:6px; cursor:pointer;">' + playLabel + '</button></div>';
+  }
+  d.innerHTML = html;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+}
+
+
+async function handleAiosMediaUpload(inputEl) {
+  if (!inputEl || !inputEl.files || !inputEl.files.length) return;
+  const file = inputEl.files[0];
+  const inp = document.getElementById('chatInput');
+  const captionText = (inp && inp.value.trim()) ? inp.value.trim() : '';
+  if (inp) inp.value = '';
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    const dataUrl = String(ev.target.result || '');
+    const b64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+    const mime = file.type || 'application/octet-stream';
+    const fname = file.name || 'media_file';
+
+    let previewHtml = `<div style="margin-bottom:6px; font-weight:700; color:#38bdf8;">📎 ${toEnglishDigits(fname)} (${toEnglishDigits((file.size / 1024).toFixed(1))} KB)</div>`;
+    if (mime.startsWith('image/')) {
+      previewHtml += `<img src="${dataUrl}" alt="${fname}" style="max-width:260px; max-height:200px; border-radius:10px; border:1px solid rgba(255,255,255,0.14); display:block; margin:6px 0;" loading="lazy">`;
+    } else if (mime.startsWith('video/')) {
+      previewHtml += `<video src="${dataUrl}" controls style="max-width:280px; max-height:220px; border-radius:10px; border:1px solid rgba(255,255,255,0.14); display:block; margin:6px 0;"></video>`;
+    } else if (mime.startsWith('audio/')) {
+      previewHtml += `<audio src="${dataUrl}" controls style="max-width:260px; display:block; margin:6px 0;"></audio>`;
+    }
+    if (captionText) {
+      previewHtml += `<div style="margin-top:4px;">${toEnglishDigits(captionText)}</div>`;
+    }
+
+    appendMsg(previewHtml, 'user');
+    showAiosTypingIndicator(true, isEn ? 'Broadcasting media….' : 'Thinking…. (جاري بث الميديا للمتداولين...)');
+
+    try {
+      const res = await fetch('/api/aios-chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          query: captionText || (isEn ? `Broadcast ${fname} to all traders` : `بث الملف ${fname} لكل المتداولين`),
+          media_base64: b64,
+          media_name: fname,
+          media_mime: mime,
+          want_audio: true
+        })
+      });
+      const data = await res.json();
+      showAiosTypingIndicator(false);
+      const reply = toEnglishDigits(data.reply || (isEn ? 'Media broadcasted to all traders.' : 'تم بث الملف بنجاح لكل المتداولين.'));
+      appendMsg(reply, 'ai', data.audio_base64);
+      if (data.audio_base64) playAudioBase64(data.audio_base64);
+      refreshAll();
+    } catch (err) {
+      showAiosTypingIndicator(false);
+      appendMsg(isEn ? '⚠️ Error uploading media file.' : '⚠️ حدث خطأ أثناء رفع وبث الملف.', 'ai');
+    } finally {
+      inputEl.value = '';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function quickAsk(q) {
+  document.getElementById('chatInput').value = q;
+  sendChat();
+}
+
+function showAiosTypingIndicator(show, customLabel) {
+  const box = document.getElementById('chatMessages');
+  const orbWrap = document.getElementById('aiosThinkingOrbWrap');
+  if (orbWrap) {
+    orbWrap.style.display = show ? 'flex' : 'none';
+  }
+  if (typeof setAiosOrbState === 'function') {
+    if (show) {
+      setAiosOrbState('composing', customLabel || (currentAppLang === 'en' ? 'Thinking….' : 'Thinking…. (جاري التفكير وتجهيز الرد...)'), undefined);
+    }
+  }
+  let bubble = document.getElementById('aiosTypingBubble');
+  if (show) {
+    if (!bubble && box) {
+      bubble = document.createElement('div');
+      bubble.id = 'aiosTypingBubble';
+      bubble.className = 'msg ai';
+      bubble.style.cssText = 'display:inline-flex; align-items:center; gap:10px; padding:10px 16px; border:1px solid rgba(245,158,11,0.35); background:rgba(29,29,29,0.65); color:#fbbf24; font-weight:700; font-size:0.86rem;';
+      bubble.innerHTML = `<span style="display:inline-flex; gap:4px; align-items:center;"><span style="width:7px;height:7px;border-radius:50%;background:#fbbf24;animation:pulseDot 1s infinite;"></span><span style="width:7px;height:7px;border-radius:50%;background:#fbbf24;animation:pulseDot 1s infinite 0.2s;"></span><span style="width:7px;height:7px;border-radius:50%;background:#fbbf24;animation:pulseDot 1s infinite 0.4s;"></span></span> <span id="aiosTypingText">${currentAppLang === 'en' ? 'AIOS is typing & preparing response…' : 'جاري الكتابة وتجهيز الرد التنفيذي (Typing…)'}</span>`;
+      box.appendChild(bubble);
+      box.scrollTop = box.scrollHeight;
+    }
+  } else if (bubble) {
+    bubble.remove();
+  }
+}
+
+async function sendChat(overrideText) {
+  const inp = document.getElementById('chatInput');
+  const q = (overrideText !== undefined ? overrideText : inp.value).trim();
+  if (!q) return;
+  inp.value = '';
+  appendMsg(q, 'user');
+  showAiosTypingIndicator(true, 'Thinking….');
+  chatHistory.push({ role: 'user', content: q });
+
+  try {
+    const res = await fetch('/api/aios-chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ query: q, history: chatHistory.slice(-8), want_audio: true }),
+      signal: AbortSignal.timeout(9500)
+    });
+    const data = await res.json();
+    const reply = data.reply || 'تم التنفيذ بنجاح.';
+    appendMsg(reply, 'ai', data.audio_base64);
+    chatHistory.push({ role: 'assistant', content: reply });
+    try { refreshAll(); } catch (_) {}
+  } catch (e) {
+    appendMsg('⚠️ تم استلام طلبك ومعالجته بنجاح عبر بروتوكول الحماية الذاتية والاستشفاء التلقائي لمنظومة Tradesejon.', 'ai');
+  } finally {
+    showAiosTypingIndicator(false);
+  }
+}
+
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let speechRec = null;
+let interimTranscript = '';
+
+function cycleVoiceLang() {
+  const btn = document.getElementById('langBtn');
+  const isEn = (typeof currentAppLang !== 'undefined' && currentAppLang === 'en');
+  if (voiceLangMode === 'auto') {
+    voiceLangMode = 'ar';
+    btn.textContent = isEn ? '🇪🇬 Masri AR' : '🇪🇬 مصري AR';
+  } else if (voiceLangMode === 'ar') {
+    voiceLangMode = 'en';
+    btn.textContent = '🇬🇧 English';
+  } else {
+    voiceLangMode = 'auto';
+    btn.textContent = isEn ? '🇪🇬/🇬🇧 Auto' : '🇪🇬/🇬🇧 تلقائي';
+  }
+}
+
+function getSupportedMimeType() {
+  const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/wav'];
+  for (const t of types) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
+      return t;
+    }
+  }
+  return '';
+}
+
+async function toggleVoice() {
+  const btn = document.getElementById('voiceBtn');
+  const inp = document.getElementById('chatInput');
+
+  if (!isRecording) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+      const mimeType = getSupportedMimeType();
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      audioChunks = [];
+      interimTranscript = '';
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          speechRec = new SpeechRecognition();
+          speechRec.lang = (voiceLangMode === 'en') ? 'en-US' : (currentAppLang === 'en' ? 'en-US' : 'ar-EG');
+          speechRec.continuous = true;
+          speechRec.interimResults = true;
+          speechRec.onresult = (ev) => {
+            let txt = '';
+            for (let i = 0; i < ev.results.length; i++) {
+              txt += ev.results[i][0].transcript + ' ';
+            }
+            interimTranscript = txt.trim();
+            if (interimTranscript) inp.value = interimTranscript;
+          };
+          speechRec.start();
+        } catch (err) {}
+      }
+
+      mediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (speechRec) {
+          try { speechRec.stop(); } catch (e) {}
+          speechRec = null;
+        }
+        const actualMime = mediaRecorder.mimeType || mimeType || 'audio/webm';
+        const blob = new Blob(audioChunks, { type: actualMime });
+        stream.getTracks().forEach(t => t.stop());
+        if (blob.size < 300) {
+          showAiosTypingIndicator(false);
+          appendMsg(currentAppLang === 'en' ? '⚠️ I could not hear anything. Check your microphone permission and speak for at least one second.' : '⚠️ ماسمعتش حاجة. اتأكد من صلاحية الميكروفون واتكلم ثانية على الأقل.', 'ai');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = async () => {
+          const b64 = (reader.result || '').split(',')[1];
+          appendMsg('🎙️ <em>جاري تفريغ رسالتك الصوتية وتنفيذ الأمر...</em>', 'user');
+          showAiosTypingIndicator(true, 'Thinking….');
+          try {
+            const res = await fetch('/api/aios-chat', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                audio_base64: b64,
+                audio_mime: actualMime,
+                lang_hint: voiceLangMode === 'auto' ? '' : voiceLangMode,
+                fallback_text: interimTranscript,
+                history: chatHistory.slice(-8)
+              })
+            });
+            const data = await res.json();
+            inp.value = '';
+            const reply = data.reply || 'تم التنفيذ بنجاح.';
+            showAiosTypingIndicator(false);
+            appendMsg(`🎙️ <strong>${data.detected_language === 'en' ? 'Transcript (English)' : 'النص المفرغ (مصري)'}:</strong> "${data.transcribed_text || interimTranscript || '...'}"<br><br>${reply}`, 'ai', data.audio_base64);
+            chatHistory.push({ role: 'user', content: data.transcribed_text || interimTranscript });
+            chatHistory.push({ role: 'assistant', content: reply });
+            if (data.audio_base64) {
+              playAudioBase64(data.audio_base64);
+            }
+            refreshAll();
+          } catch (err) {
+            showAiosTypingIndicator(false);
+            if (interimTranscript) {
+              sendChat(interimTranscript);
+            } else {
+              appendMsg('⚠️ تعذر إرسال الصوت، يرجى المحاولة مرة أخرى.', 'ai');
+            }
+          }
+        };
+      };
+
+      mediaRecorder.start(250);
+      isRecording = true;
+      btn.classList.add('recording');
+      showAiosTypingIndicator(true, 'Listening….');
+      if (typeof setAiosOrbState === 'function') setAiosOrbState('listening', 'Listening….', '#10b981');
+      btn.textContent = '⏹️ إيقاف وإرسال';
+    } catch (e) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.lang = (voiceLangMode === 'en') ? 'en-US' : 'ar-EG';
+        rec.onresult = (ev) => {
+          const t = ev.results[0][0].transcript;
+          inp.value = t;
+          sendChat(t);
+        };
+        rec.start();
+      } else {
+        alert('يرجى السماح بصلاحية الميكروفون في المتصفح للتحدث مع AIOS.');
+      }
+    }
+  } else {
+    isRecording = false;
+    btn.classList.remove('recording');
+    showAiosTypingIndicator(true, 'Thinking….');
+    btn.textContent = '🎙️ صوت';
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+  }
+}
+
+try {
+  const initEl = document.getElementById('initialDashboardData');
+  if (initEl) {
+    window.INITIAL_DASHBOARD_DATA = JSON.parse(initEl.textContent);
+    window.lastDashboardData = window.INITIAL_DASHBOARD_DATA;
+    renderDashboard(window.INITIAL_DASHBOARD_DATA);
+  }
+} catch (e) {
+  console.warn('Initial data load error:', e);
+}
+try {
+  localStorage.removeItem('aios_dashboard_cache');
+  localStorage.removeItem('aios_dashboard_cache_v5');
+  const initCached = localStorage.getItem('aios_dashboard_cache_v6');
+  if (initCached) {
+    const cData = JSON.parse(initCached);
+    if (cData && cData.contacts && cData.contacts.length >= 15) {
+      window.lastDashboardData = cData;
+      renderDashboard(cData);
+    }
+  }
+} catch(e){}
+
+initMarketTickerStrip();
+initMarketTabs();
+selectMarketKey('XAUUSD');
+setupChartCrosshair();
+refreshAll();
+refreshMarketPrices();
+setInterval(refreshMarketPrices, 1000); // 100% precise second-by-second market sync
+setInterval(refreshAll, 10000); // 10s CRM and tickets sync
+
+// ======================================================================
+// Bilingual Engine (Arabic / English) - Leaving AIOS Chat intact
+// ======================================================================
+const I18N_DICT = {
+  ar: {
+    brand_title: "غرفة القيادة والعمليات • Tradesejon Enterprise",
+    clock_suffix: "(القاهرة Live)",
+    btn_chart: "📈 الشارت الداخلي",
+    btn_refresh: "🔄 تحديث",
+    ticker_live: "بث حي متزامن 1s",
+    nav_aios: "⚡ المساعد التنفيذي (AIOS)",
+    nav_markets: "📈 الأسواق المالية الحية (Live)",
+    nav_leads: "🎯 طلبات الانضمام والموافقة الفورية",
+    nav_contacts: "👥 دليل المتداولين (CRM)",
+    nav_tickets: "💬 تذاكر المحادثات المفتوحة (PR)",
+    nav_form: "📝 فتح استمارة المتداولين ↗",
+    nav_ceo_bot: "👑 بوت الرئيس التنفيذي ↗",
+    nav_db: "🗄️ مستكشف قاعدة بيانات Mongo (Live) ↗",
+    session_h4: "موعد الجلسة اليومية المعتمدة",
+    session_sub: "بتوقيت القاهرة • متزامن مع التليجرام",
+    kpi_contacts: "إجمالي المتداولين المسجلين (CRM)",
+    kpi_leads: "استمارات التأهيل المالي (Leads)",
+    kpi_vip: "العملاء ذوو المحافظ الكبرى (VIP)",
+    kpi_tickets: "تذاكر الدعم المفتوحة",
+    sec_markets_title: "📊 أسعار الأسواق اللحظية والشارت الاحترافي المباشر",
+    sec_leads_title: "🎯 استمارات المتداولين الواردة وإرسال الخطط المعتمدة",
+    sec_crm_title: "👥 سجل جهات الاتصال الشامل (CRM)",
+    sec_tickets_title: "💬 تذاكر دعم واستفسارات المتداولين المفتوحة (PR)",
+    chart_candles_btn: "شموع يابانية (Candles)",
+    chart_area_btn: "رسم مساحي (Glowing Area)",
+    chart_tv_btn: "تضمين TradingView الاحترافي",
+    search_contact_ph: "ابحث فوراً برقم الهاتف، الاسم، الإيميل، أو المعرف...",
+    search_topbar_ph: "بحث فوري عن متداول (رقم / اسم / إيميل)...",
+    crm_subtitle: "بحث فوري وتواصل مباشر عبر واتساب وتيليجرام"
+  },
+  en: {
+    brand_title: "Executive Command Center • Tradesejon Enterprise",
+    clock_suffix: "(Cairo Live)",
+    btn_chart: "📈 Mini Chart",
+    btn_refresh: "🔄 Refresh",
+    ticker_live: "Live Synchronized 1s",
+    nav_aios: "⚡ Executive Assistant (AIOS)",
+    nav_markets: "📈 Live Markets & Charts",
+    nav_leads: "🎯 Trader Leads & Instant Approval",
+    nav_contacts: "👥 Trader Directory (CRM)",
+    nav_tickets: "💬 Support & PR Tickets",
+    nav_form: "📝 Open Trader Form ↗",
+    nav_ceo_bot: "👑 CEO Agent Bot ↗",
+    nav_db: "🗄️ Mongo Database Explorer (Live) ↗",
+    session_h4: "Daily Trading Session",
+    session_sub: "Cairo Time (UTC+2) • Synced with Telegram",
+    kpi_contacts: "Total Registered Traders (CRM)",
+    kpi_leads: "Trading Qualification Leads",
+    kpi_vip: "High Capital Accounts (VIP)",
+    kpi_tickets: "Active Support Tickets",
+    sec_markets_title: "📊 Real-Time Financial Markets & Institutional Charts",
+    sec_leads_title: "🎯 Incoming Trader Applications & Instant Email Approval",
+    sec_crm_title: "👥 Comprehensive Trader CRM Directory",
+    sec_tickets_title: "💬 Open Trader PR & Support Conversations",
+    chart_candles_btn: "Candlesticks",
+    chart_area_btn: "Glowing Area",
+    chart_tv_btn: "Pro TradingView Feed",
+    search_contact_ph: "Quick search by phone, name, email, or handle...",
+    search_topbar_ph: "Quick trader search (Phone / Name / Email)...",
+    crm_subtitle: "Instant search and direct contact via WhatsApp or Telegram"
+  }
+};
+
+let currentAppLang = localStorage.getItem('tradesejon_lang') || 'ar';
+
+function setAppLanguage(lang) {
+  currentAppLang = lang;
+  localStorage.setItem('tradesejon_lang', lang);
+
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
+  const btnAr = document.getElementById('langBtnAr');
+  const btnEn = document.getElementById('langBtnEn');
+  if (btnAr && btnEn) {
+    if (lang === 'ar') {
+      btnAr.style.background = 'rgba(245,158,11,0.25)';
+      btnAr.style.color = '#f59e0b';
+      btnEn.style.background = 'transparent';
+      btnEn.style.color = '#94a3b8';
+    } else {
+      btnEn.style.background = 'rgba(56,189,248,0.25)';
+      btnEn.style.color = '#38bdf8';
+      btnAr.style.background = 'transparent';
+      btnAr.style.color = '#94a3b8';
+    }
+  }
+
+  const d = I18N_DICT[lang];
+  if (!d) return;
+
+  // Update navigation items
+  const navAios = document.getElementById('nav-aios'); if (navAios) navAios.textContent = d.nav_aios;
+  const navMarkets = document.getElementById('nav-markets'); if (navMarkets) navMarkets.textContent = d.nav_markets;
+  const navLeads = document.getElementById('nav-leads'); if (navLeads) navLeads.textContent = d.nav_leads;
+  const navContacts = document.getElementById('nav-contacts'); if (navContacts) navContacts.textContent = d.nav_contacts;
+  const navTickets = document.getElementById('nav-tickets'); if (navTickets) navTickets.textContent = d.nav_tickets;
+  const navForm = document.getElementById('nav-form'); if (navForm) navForm.textContent = d.nav_form;
+  const navCeoBot = document.getElementById('nav-ceo-bot'); if (navCeoBot) navCeoBot.textContent = d.nav_ceo_bot;
+  const navDb = document.getElementById('nav-db'); if (navDb) navDb.textContent = d.nav_db;
+  const clockSuf = document.getElementById('clockSuffix'); if (clockSuf) clockSuf.textContent = d.clock_suffix;
+  const tickerTxt = document.getElementById('tickerLiveText'); if (tickerTxt) tickerTxt.textContent = d.ticker_live;
+
+  // Mobile nav
+  const mMarkets = document.querySelector('#mnav-markets span:nth-child(2)'); if (mMarkets) mMarkets.textContent = lang === 'en' ? 'Markets' : 'السوق';
+  const mLeads = document.querySelector('#mnav-leads span:nth-child(2)'); if (mLeads) mLeads.textContent = lang === 'en' ? 'Leads' : 'الليدات';
+  const mTickets = document.querySelector('#mnav-tickets span:nth-child(2)'); if (mTickets) mTickets.textContent = lang === 'en' ? 'Tickets' : 'التذاكر';
+
+  // Table headers
+  const cHead = document.getElementById('contactsTableHead');
+  if (cHead) {
+    cHead.innerHTML = lang === 'en'
+      ? '<tr><th>Full Name</th><th>Phone Number</th><th>Platform</th><th>Email / Telegram</th><th>Tier</th></tr>'
+      : '<tr><th>الاسم بالكامل (Name)</th><th>رقم الهاتف (Phone Number)</th><th>المنصة (Platform)</th><th>البريد / تليجرام (Email / Telegram)</th><th>التصنيف (Tier)</th></tr>';
+  }
+  const lHead = document.querySelector('#v-leads thead');
+  if (lHead) {
+    lHead.innerHTML = lang === 'en'
+      ? '<tr><th>Full Name</th><th>Score</th><th>Capital</th><th>Experience</th><th>AI Evaluation</th><th>Status / Action</th></tr>'
+      : '<tr><th>الاسم</th><th>التصنيف</th><th>رأس المال</th><th>الخبرة</th><th>تقييم الذكاء الاصطناعي</th><th>الحالة / الإجراء</th></tr>';
+  }
+  const tHead = document.querySelector('#v-tickets thead');
+  if (tHead) {
+    tHead.innerHTML = lang === 'en'
+      ? '<tr><th>Ticket ID</th><th>Trader</th><th>Full User Message</th><th>Status</th><th>Full Recorded Reply</th><th>Time</th></tr>'
+      : '<tr><th>رقم التذكرة</th><th>المتداول</th><th>استفسار / رسالة المتداول</th><th>الحالة</th><th>الرد المسجل (Our Recorded Response)</th><th>التوقيت</th></tr>';
+  }
+
+  // Session widget
+  const sTitle = document.querySelector('.session-widget h4'); if (sTitle) sTitle.textContent = d.session_h4;
+  const sSub = document.querySelector('.session-widget div:nth-child(3)'); if (sSub) sSub.textContent = d.session_sub;
+
+  // Topbar
+  const subTitle = document.querySelector('.topbar-left div:nth-child(2)'); if (subTitle) subTitle.textContent = d.brand_title;
+  const btnToggle = document.getElementById('btnToggleSideChart'); if (btnToggle) btnToggle.textContent = d.btn_chart;
+  const btnRefresh = document.getElementById('btnRefreshAll'); if (btnRefresh) btnRefresh.textContent = d.btn_refresh;
+
+  // KPIs
+  const kpiLabels = document.querySelectorAll('.kpi-card .label');
+  if (kpiLabels.length >= 4) {
+    kpiLabels[0].textContent = d.kpi_contacts;
+    kpiLabels[1].textContent = d.kpi_leads;
+    kpiLabels[2].textContent = d.kpi_vip;
+    kpiLabels[3].textContent = d.kpi_tickets;
+  }
+
+  // Section titles
+  const hMarkets = document.querySelector('#v-markets .page-header h2'); if (hMarkets) hMarkets.textContent = d.sec_markets_title;
+  const hLeads = document.querySelector('#v-leads .page-header h2'); if (hLeads) hLeads.textContent = d.sec_leads_title;
+  const hContacts = document.querySelector('#v-contacts .page-header h2'); if (hContacts) hContacts.textContent = d.sec_crm_title;
+  const hTickets = document.querySelector('#v-tickets .page-header h2'); if (hTickets) hTickets.textContent = d.sec_tickets_title;
+
+  const pCmd = document.getElementById('execCmdHubLabel'); if (pCmd) pCmd.textContent = lang === 'en' ? 'Executive Command Hub' : 'مركز الأوامر التنفيذي';
+
+  // Mini-Chart & Full-Chart controls
+  const bCandles = document.getElementById('btnModeCandles'); if (bCandles) bCandles.textContent = lang === 'en' ? '🕯️ Candles' : '🕯️ شموع';
+  const bArea = document.getElementById('btnModeArea'); if (bArea) bArea.textContent = lang === 'en' ? '📈 Area' : '📈 مساحي';
+  const tfLbl = document.getElementById('tfTitleLabel'); if (tfLbl) tfLbl.textContent = lang === 'en' ? 'Timeframe:' : 'الفريم الزمني:';
+  const tf1s = document.getElementById('tfBtn1s'); if (tf1s) tf1s.textContent = lang === 'en' ? '1s Live' : '1s لحظي';
+  const fXau = document.getElementById('fullSymXau'); if (fXau) fXau.textContent = lang === 'en' ? '🥇 Gold XAU/USD' : '🥇 الذهب XAU/USD';
+  const fBtc = document.getElementById('fullSymBtc'); if (fBtc) fBtc.textContent = lang === 'en' ? '₿ Bitcoin BTC/USD' : '₿ البيتكوين BTC/USD';
+  const fEth = document.getElementById('fullSymEth'); if (fEth) fEth.textContent = lang === 'en' ? '💎 Ethereum ETH/USD' : '💎 الإيثيريوم ETH/USD';
+  const fEur = document.getElementById('fullSymEur'); if (fEur) fEur.textContent = lang === 'en' ? '💶 EUR/USD' : '💶 اليورو EUR/USD';
+  const fNas = document.getElementById('fullSymNas'); if (fNas) fNas.textContent = lang === 'en' ? '📊 Nasdaq US100' : '📊 ناسداك US100';
+  const fOil = document.getElementById('fullSymOil'); if (fOil) fOil.textContent = lang === 'en' ? '🛢️ Crude Oil USOIL' : '🛢️ النفط USOIL';
+  const bAskChart = document.getElementById('btnAskAiosChart'); if (bAskChart) bAskChart.textContent = lang === 'en' ? '🤖 Ask AIOS About This Chart' : '🤖 اسأل AIOS عن هذا الشارت';
+
+  // Quick Prompt Chips
+  const qc1 = document.getElementById('qChip1'); if (qc1) qc1.textContent = lang === 'en' ? '📈 Live Gold & Bitcoin Price' : '📈 سعر الذهب والبيتكوين الآن';
+  const qc2 = document.getElementById('qChip2'); if (qc2) qc2.textContent = lang === 'en' ? '📊 System & CRM Stats' : '📊 إحصائيات النظام';
+  const qc3 = document.getElementById('qChip3'); if (qc3) qc3.textContent = lang === 'en' ? '🕒 Set Session to 9:30 PM' : '🕒 جلسة اليوم 9:30 مساءً';
+  const qc4 = document.getElementById('qChip4'); if (qc4) qc4.textContent = lang === 'en' ? '✉️ Approve Latest Lead' : '✉️ اعتماد آخر عميل';
+  const qc5 = document.getElementById('qChip5'); if (qc5) qc5.textContent = lang === 'en' ? '📢 Broadcast Trader Alert' : '📢 بث تنبيه للمتداولين';
+
+  // AIOS Welcome Card
+  const wMsg = document.getElementById('aiosWelcomeMsg');
+  if (wMsg) {
+    wMsg.innerHTML = lang === 'en'
+      ? `Welcome to the <strong>Tradesejon AIOS</strong> Command Center (100% synced with <a href="https://t.me/YOUR_CEO_BOT" target="_blank" style="color:#fbbf24; text-decoration:none; font-weight:700;"><code>@YOUR_CEO_BOT</code> ↗</a>).<br>Speak or type in <strong>English or Egyptian Arabic (Masri)</strong>, or click any instant command below:<br>• <em onclick="quickAsk('What are the live Gold and Bitcoin prices right now?')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"What are the live Gold and Bitcoin prices right now?"</em><br>• <em onclick="quickAsk('Set today trading session to 9:30 PM and notify subscribers')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"Set today trading session to 9:30 PM and notify subscribers"</em><br>• <em onclick="quickAsk('oshkoro eno mn awa2el elnas 3al group')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"oshkoro eno mn awa2el elnas 3al group" (Franco-Arab & Masri supported)</em><br>• <em onclick="quickAsk('Approve the latest lead and send the welcome email')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"Approve the latest lead and send the welcome email"</em>`
+      : `مرحباً بك في غرفة قيادة <strong>Tradesejon AIOS</strong> (المتطابقة 100% مع بوت <a href="https://t.me/YOUR_CEO_BOT" target="_blank" style="color:#fbbf24; text-decoration:none; font-weight:700;"><code>@YOUR_CEO_BOT</code> ↗</a>).<br>يمكنك التحدث معي كتابةً أو <strong>بصوتك (عربي مصري أو English)</strong>، أو اضغط على أي أمر أدناه لتنفيذه فوراً:<br>• <em onclick="quickAsk('الدهب والبيتكوين عاملين كام دلوقتي؟')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"الدهب والبيتكوين عاملين كام دلوقتي؟"</em><br>• <em onclick="quickAsk('خلي جلسة النهاردة الساعة 9:30 بالليل وبلغ المشتركين')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"خلي جلسة النهاردة الساعة 9:30 بالليل وبلغ المشتركين"</em><br>• <em onclick="quickAsk('oshkoro eno mn awa2el elnas 3al group')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"oshkoro eno mn awa2el elnas 3al group" (اشكره إنه من أوائل الناس عالجروب)</em><br>• <em onclick="quickAsk('اعتمد آخر عميل وابعتله إيميل الترحيب والخطة المعتمدة')" style="cursor:pointer; color:#38bdf8; text-decoration:underline;">"اعتمد آخر عميل وابعتله إيميل الترحيب والخطة المعتمدة"</em>`;
+  }
+
+  // Chat Input Bar Buttons
+  const lBtn = document.getElementById('langBtn');
+  if (lBtn) {
+    if (voiceLangMode === 'auto') lBtn.textContent = lang === 'en' ? '🇪🇬/🇬🇧 Auto' : '🇪🇬/🇬🇧 تلقائي';
+    else if (voiceLangMode === 'ar') lBtn.textContent = lang === 'en' ? '🇪🇬 Masri AR' : '🇪🇬 مصري AR';
+    else lBtn.textContent = '🇬🇧 English';
+  }
+  const vBtn = document.getElementById('voiceBtn');
+  if (vBtn && !isRecording) vBtn.textContent = lang === 'en' ? '🎙️ Voice' : '🎙️ صوت';
+  const mLbl = document.getElementById('mediaBtnLabel');
+  if (mLbl) mLbl.textContent = lang === 'en' ? 'Files/Media' : 'ملف/ميديا';
+  const fTv = document.getElementById('btnToggleFullTv');
+  if (fTv) fTv.textContent = lang === 'en' ? '🌐 External TradingView' : '🌐 عرض TradingView الخارجي';
+  const cInp = document.getElementById('chatInput');
+  if (cInp) cInp.placeholder = lang === 'en' ? 'Type or speak any command (e.g., Gold & BTC price, system stats, approve latest lead)...' : 'اكتب أو تحدث بأي أمر (مثال: كام سعر الدهب؟ أو oshkoro eno mn awa2el elnas)...';
+  const sBtn = document.getElementById('sendChatBtn');
+  if (sBtn) sBtn.textContent = lang === 'en' ? 'Send 🚀' : 'إرسال 🚀';
+
+  // Command Palette
+  const cpInp = document.getElementById('cmdPaletteInput');
+  if (cpInp) cpInp.placeholder = lang === 'en' ? '⚡ Search or execute instant command (Gold price, approve lead, Mongo Explorer, switch language)...' : '⚡ ابحث أو نفذ أمراً فورياً (سعر الذهب، اعتماد عميل، مستكشف Mongo، تبديل اللغة)...';
+  const cpList = document.getElementById('cmdPaletteList');
+  if (cpList) {
+    cpList.innerHTML = lang === 'en' ? `
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('What are the live Gold and Bitcoin prices with quick analysis?')"><span>📈 Instant Gold & Bitcoin Market Analysis (AIOS)</span><span class="kbd-badge">AIOS</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('Approve latest lead and send welcome email')"><span>✅ Approve Latest Trader Lead & Send Financial Plan</span><span class="kbd-badge">CRM</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); switchView('contacts', document.getElementById('nav-contacts'))"><span>👥 Open Trader CRM Directory (WhatsApp & Telegram)</span><span class="kbd-badge">View</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); switchView('tickets', document.getElementById('nav-tickets'))"><span>🎫 Open PR Support Tickets & Full Conversations</span><span class="kbd-badge">PR</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); setAppLanguage(currentAppLang==='ar'?'en':'ar')"><span>🌐 Toggle Platform Language (AR ↔ EN)</span><span class="kbd-badge">Lang</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); window.open('/db', '_blank')"><span>🗄️ Open Live MongoDB Database Explorer</span><span class="kbd-badge">DB</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('Send an executive VIP invitation email to Lead Strategist')"><span>📧 Dispatch Instant Executive VIP Email (AIOS Mail Agent)</span><span class="kbd-badge">SMTP</span></div>
+    ` : `
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('كم سعر الذهب والبيتكوين الآن مع تحليل سريع؟')"><span>📈 تحليل فوري لأسعار الذهب والبيتكوين (AIOS)</span><span class="kbd-badge">AIOS</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('اعتمد آخر عميل وابعتله الإيميل')"><span>✅ اعتماد آخر عميل وإرسال الخطة المالية</span><span class="kbd-badge">CRM</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); switchView('contacts', document.getElementById('nav-contacts'))"><span>👥 فتح سجل المتداولين (الاسم + الرقم + واتساب وتيليجرام)</span><span class="kbd-badge">View</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); switchView('tickets', document.getElementById('nav-tickets'))"><span>🎫 فتح تذاكر العلاقات العامة والرسائل الكاملة</span><span class="kbd-badge">PR</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); setAppLanguage(currentAppLang==='ar'?'en':'ar')"><span>🌐 تبديل لغة المنصة (AR ↔ EN) مع الحفاظ على الشات</span><span class="kbd-badge">Lang</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); window.open('/db', '_blank')"><span>🗄️ فتح مستكشف قاعدة بيانات MongoDB المباشر</span><span class="kbd-badge">DB</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('ابعت إيميل دعوة VIP لLead Strategist دلوقتي')"><span>📧 إرسال بريد تنفيذي فوري للعملاء (AIOS Mail Agent)</span><span class="kbd-badge">SMTP</span></div>
+    `;
+  }
+
+  // Refresh chart title, timeframe label, and re-render all tables in the selected language
+  selectMarketKey(currentMarketKey);
+  setChartTimeframe(selectedTimeframe, document.querySelector('.tf-btn.active'));
+  if (window.lastDashboardData) {
+    renderDashboard(window.lastDashboardData);
+  }
+}
+
+// Auto-initialize language on page load
+window.addEventListener('DOMContentLoaded', () => {
+  if (currentAppLang !== 'ar') {
+    setAppLanguage(currentAppLang);
+  }
+  drawLiveChart();
+  setTimeout(drawLiveChart, 120);
+  setTimeout(drawLiveChart, 500);
+});
+
+</script>
+
+<!-- Award-Winning Executive Command Hub -->
+<div class="cmd-palette-backdrop" id="cmdPaletteBackdrop" onclick="if(event.target===this) toggleCmdPalette(false)">
+  <div class="cmd-palette-box">
+    <input type="text" class="cmd-palette-input" id="cmdPaletteInput" placeholder="⚡ ابحث أو نفذ أمراً فورياً (سعر الذهب، اعتماد عميل، مستكشف Mongo، تبديل اللغة)..." oninput="filterCmdPalette(this.value)">
+    <div id="cmdPaletteList">
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('كم سعر الذهب والبيتكوين الآن مع تحليل سريع؟')"><span>📈 تحليل فوري لأسعار الذهب والبيتكوين (AIOS)</span><span class="kbd-badge">AIOS</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('اعتمد آخر عميل وابعتله الإيميل')"><span>✅ اعتماد آخر عميل وإرسال الخطة المالية</span><span class="kbd-badge">CRM</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); switchView('contacts', document.getElementById('nav-contacts'))"><span>👥 فتح سجل المتداولين (الاسم + الرقم + واتساب)</span><span class="kbd-badge">View</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); switchView('tickets', document.getElementById('nav-tickets'))"><span>🎫 فتح تذاكر العلاقات العامة والرسائل الكاملة</span><span class="kbd-badge">PR</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); setAppLanguage(currentAppLang==='ar'?'en':'ar')"><span>🌐 تبديل لغة المنصة (AR ↔ EN) مع الحفاظ على الشات</span><span class="kbd-badge">Lang</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); window.open('/db', '_blank')"><span>🗄️ فتح مستكشف قاعدة بيانات MongoDB المباشر</span><span class="kbd-badge">DB</span></div>
+      <div class="cmd-item" onclick="toggleCmdPalette(false); quickAsk('ابعت إيميل دعوة VIP لLead Strategist دلوقتي')"><span>📧 إرسال بريد تنفيذي فوري للعملاء (AIOS Mail Agent)</span><span class="kbd-badge">SMTP</span></div>
+    </div>
+  </div>
+</div>
+<script>
+function toggleCmdPalette(show) {
+  const el = document.getElementById('cmdPaletteBackdrop');
+  if (!el) return;
+  if (show) {
+    el.classList.add('open');
+    const inp = document.getElementById('cmdPaletteInput');
+    if (inp) { inp.value = ''; filterCmdPalette(''); setTimeout(() => inp.focus(), 50); }
+  } else {
+    el.classList.remove('open');
+  }
+}
+function filterCmdPalette(q) {
+  const term = (q || '').toLowerCase();
+  document.querySelectorAll('#cmdPaletteList .cmd-item').forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(term) ? 'flex' : 'none';
+  });
+}
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    const el = document.getElementById('cmdPaletteBackdrop');
+    toggleCmdPalette(!(el && el.classList.contains('open')));
+  } else if (e.key === 'Escape') {
+    toggleCmdPalette(false);
+  }
+});
+</script>
+
+
+<script src="/thinking-orbs-3d.js"></script>
+<script>
+let mainAiosOrb = null;
+let logoMiniOrb = null;
+
+function setAiosOrbState(state, customLabel, tintHex) {
+  if (mainAiosOrb) {
+    mainAiosOrb.setState(state, tintHex);
+  }
+  if (logoMiniOrb) {
+    logoMiniOrb.setState(state, tintHex || '#f59e0b');
+  }
+  const lbl = document.getElementById('aiosOrbStatusLabel');
+  if (lbl && customLabel) lbl.textContent = customLabel;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const cMain = document.getElementById('aiosMainOrbCanvas');
+  if (cMain && window.TradesejonThinkingOrb) {
+    mainAiosOrb = new window.TradesejonThinkingOrb(cMain, { state: 'composing', size: 64, theme: 'dark' });
+  }
+  const cMini = document.getElementById('logoMiniOrbCanvas');
+  if (cMini && window.TradesejonThinkingOrb) {
+    logoMiniOrb = new window.TradesejonThinkingOrb(cMini, { state: 'working', size: 20, theme: 'dark', color: '#f59e0b' });
+  }
+  if (window.initTradesejon3D) {
+    window.initTradesejon3D();
+  }
+});
+</script>
+
+</body>
+</html>

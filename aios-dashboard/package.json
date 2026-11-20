@@ -1,0 +1,16 @@
+{
+  "name": "tradesejon-aios-vercel",
+  "version": "1.0.0",
+  "description": "",
+  "main": "thinking-orbs-3d.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "mongodb": "^7.8.0",
+    "nodemailer": "^10.5.0"
+  }
+}

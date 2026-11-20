@@ -1,0 +1,58 @@
+{
+  "id": "tradesejon-wf-03-trader-agent",
+  "name": "03_Tradesejon_Trader_Support_Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-trader",
+        "responseMode": "lastNode"
+      },
+      "id": "tr-wh",
+      "name": "Trader Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst text = String(body.message?.text || body.text || '').trim();\nconst chatId = String(body.message?.chat?.id || body.chat_id || '');\nconst botToken = $env.TELEGRAM_TRADER_BOT_TOKEN || '';\nconst groqKey = $env.GROQ_API_KEY || '';\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nlet reply = `🎯 **${brand} Hyper-Scalping Framework:**\\n• WIN BIG, win small, lose small.\\n• Strict Stop Loss (1-2% max risk).\\n• Live Session: ${$env.LIVE_SESSION_SCHEDULE || 'Mon–Fri 9:30 PM'}`;\nif (groqKey && text) {\n  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: `You are ${brand} Trading Mentor Assistant. Guide traders strictly on Hyper-Scalping risk management and supported platforms.` },\n        { role: 'user', content: text }\n      ]\n    })\n  }).then(res => res.json()).catch(() => ({}));\n  if (r.choices?.[0]?.message?.content) reply = r.choices[0].message.content;\n}\nif (chatId && botToken) {\n  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: chatId, text: reply, parse_mode: 'HTML' })\n  }).catch(() => null);\n}\nreturn [{ json: { ok: true, reply } }];"
+      },
+      "id": "tr-engine",
+      "name": "Hyper-Scalping & Mentor Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Trader Webhook": {
+      "main": [
+        [
+          {
+            "node": "Hyper-Scalping & Mentor Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "trader"
+  ]
+}

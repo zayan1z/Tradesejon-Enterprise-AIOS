@@ -1,0 +1,71 @@
+{
+  "id": "tradesejon-wf-11",
+  "name": "11_Tradesejon_Self_Healing_Error_Watcher_And_Audit",
+  "active": true,
+  "nodes": [
+    {
+      "id": "err-07",
+      "name": "Workflow Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "log-07",
+      "name": "Redact & Format Audit Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const e = $input.first().json || {}; return [{ json: { ok: true, workflow: (e.workflow && e.workflow.name) || 'unknown', message: String((e.execution && e.execution.error && e.execution.error.message) || 'error').slice(0, 300), at: new Date().toISOString() } }];"
+      }
+    },
+    {
+      "id": "err-alert-11",
+      "name": "Log Audit & Notify CEO Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const err = $input.first().json || {};\nif ($env.MONGODB_URI) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const c = new MongoClient($env.MONGODB_URI);\n    await c.connect();\n    await c.db($env.MONGODB_DB || 'tradesejon_prod').collection('audit_logs').insertOne({ ...err, severity: 'error', timestamp: new Date() });\n    await c.close();\n  } catch (e) {}\n}\nconst ceoChat = String($env.CEO_USER_IDS || '').split(',')[0].trim();\nconst botTok = $env.TELEGRAM_CEO_BOT_TOKEN || '';\nif (ceoChat && botTok) {\n  await fetch(`https://api.telegram.org/bot${botTok}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: ceoChat, text: `🚨 <b>Workflow Error Alert:</b> ${err.workflow}\\n<code>${err.message}</code>`, parse_mode: 'HTML' })\n  }).catch(() => null);\n}\nreturn [{ json: { ok: true, alerted: true } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Workflow Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Redact & Format Audit Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redact & Format Audit Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Audit & Notify CEO Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

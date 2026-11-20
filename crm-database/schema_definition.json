@@ -1,0 +1,11 @@
+{
+  "database": "tradesejon_prod",
+  "collections": [
+    "leads",
+    "members",
+    "campaigns",
+    "outbound_emails",
+    "audit_logs",
+    "workshop_seats"
+  ]
+}

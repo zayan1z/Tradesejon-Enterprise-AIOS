@@ -1,0 +1,11 @@
+name: Enterprise CI Audit
+on: [push, pull_request]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: python scripts/sanitize_check.py
+      - run: python -c "import json, glob; [json.load(open(f, encoding='utf-8')) for f in glob.glob('n8n-workflows/*.json')]"

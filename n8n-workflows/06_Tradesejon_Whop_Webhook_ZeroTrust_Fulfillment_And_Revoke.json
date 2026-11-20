@@ -1,0 +1,82 @@
+{
+  "id": "tradesejon-wf-06",
+  "name": "06_Tradesejon_Whop_Webhook_ZeroTrust_Fulfillment_And_Revoke",
+  "active": true,
+  "nodes": [
+    {
+      "id": "wh-02",
+      "name": "Whop Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        120,
+        260
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vps-whop-fulfillment",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "sig-02",
+      "name": "Verify HMAC-SHA256 + Classify Tier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst item = $input.first().json;\nconst headers = item.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst wid = String(lower['webhook-id'] || '');\nconst ts = String(lower['webhook-timestamp'] || '');\nconst sig = String(lower['webhook-signature'] || '');\nconst secret = String($env.WHOP_WEBHOOK_SECRET || '');\nif (!secret || !wid || !ts || !sig) {\n  return [{ json: { ok: false, httpStatus: 401, error: 'missing_signature_or_secret' } }];\n}\nconst skew = Math.abs(Math.floor(Date.now() / 1000) - Number(ts));\nif (!Number.isFinite(skew) || skew > 300) {\n  return [{ json: { ok: false, httpStatus: 401, error: 'stale_timestamp' } }];\n}\nconst rawBody = typeof item.rawBody === 'string' ? item.rawBody : JSON.stringify(item.body || item);\nconst keyBytes = secret.startsWith('ws_') ? Buffer.from(secret.slice(3), 'base64') : Buffer.from(secret, 'utf8');\nconst expectedSig = crypto.createHmac('sha256', keyBytes).update(`${wid}.${ts}.${rawBody}`).digest('base64');\nconst validSig = sig.split(/\\s+/).some((part) => {\n  const [, val] = part.split(',');\n  return val && val.length === expectedSig.length && crypto.timingSafeEqual(Buffer.from(val), Buffer.from(expectedSig));\n});\nif (!validSig) {\n  return [{ json: { ok: false, httpStatus: 401, error: 'bad_signature' } }];\n}\n\nconst payload = item.body || item;\nconst ev = String(payload.action || payload.event || '').toLowerCase();\nconst data = payload.data || payload;\nconst meta = data.metadata || {};\nconst planId = String(data.variant_id || data.plan_id || (data.plan && data.plan.id) || meta.plan_id || '');\nconst email = String(data.customer_email || data.email || meta.email || '').trim().toLowerCase();\nconst discordUserId = String(meta.discord_user_id || data.discord_user_id || '');\nconst amount = Number((data.total && data.total.amount) || data.amount || 0);\nconst isFreeOtp = planId === 'plan_TEMPLATE_01' && amount <= 0;\n\nreturn [{\n  json: {\n    ok: true,\n    httpStatus: 200,\n    event: ev,\n    planId,\n    email,\n    discordUserId,\n    amount,\n    isFreeOtp,\n    isPaid: !isFreeOtp && ev === 'payment.succeeded',\n    isRevoke: ev === 'refund.created' || ev === 'membership.deactivated',\n    invitePayload: { max_age: 900, max_uses: 1, temporary: false, unique: true }\n  }\n}];"
+      }
+    },
+    {
+      "id": "resp-02",
+      "name": "Respond Verified",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        660,
+        260
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.httpStatus || 200 }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Whop Webhook": {
+      "main": [
+        [
+          {
+            "node": "Verify HMAC-SHA256 + Classify Tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify HMAC-SHA256 + Classify Tier": {
+      "main": [
+        [
+          {
+            "node": "Respond Verified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "tradesejon-wf-11"
+  }
+}

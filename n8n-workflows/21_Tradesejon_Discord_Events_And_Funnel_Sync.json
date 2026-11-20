@@ -1,0 +1,59 @@
+{
+  "id": "tradesejon-wf-21-discord-funnel-sync",
+  "name": "21_Tradesejon_Discord_Events_And_Funnel_Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tradesejon-funnel-sync",
+        "responseMode": "lastNode"
+      },
+      "id": "dc-sync-wh",
+      "name": "Discord Funnel Sync Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst event = String(b.event || 'discord_funnel_sync');\nconst email = String(b.email || '').toLowerCase();\nconst uid = String(b.discord_user_id || '');\nconst tier = String(b.tier || b.status || 'prospect');\nif ($env.MONGODB_URI && (email || uid)) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const c = new MongoClient($env.MONGODB_URI);\n    await c.connect();\n    const db = c.db($env.MONGODB_DB || 'tradesejon_prod');\n    await db.collection('leads').updateOne(\n      email ? { email } : { discord_user_id: uid },\n      { $set: { discord_user_id: uid, tier, last_event: event, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },\n      { upsert: true }\n    );\n    await c.close();\n  } catch (e) {}\n}\nreturn [{ json: { ok: true, synced: true, event, discord_user_id: uid, tier, timestamp: new Date().toISOString() } }];"
+      },
+      "id": "dc-sync-proc",
+      "name": "Sync Discord Event to Cloud CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        380,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Discord Funnel Sync Webhook": {
+      "main": [
+        [
+          {
+            "node": "Sync Discord Event to Cloud CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "tradesejon-wf-11"
+  },
+  "tags": [
+    "tradesejon",
+    "discord",
+    "funnel-sync"
+  ]
+}

@@ -1,0 +1,104 @@
+[
+  {
+    "id": 1,
+    "topic": "Beginners & Video Onboarding",
+    "question_ar": "مبتدئ / كيف أبدأ؟",
+    "answer": "Configured program starts from scratch with daily live execution sessions so new traders master the core methodology step by step."
+  },
+  {
+    "id": 2,
+    "topic": "Prerequisites",
+    "question_ar": "المتطلبات للبدء؟",
+    "answer": "Laptop or desktop workstation, reliable high-speed internet connection, and commitment to live trading hours."
+  },
+  {
+    "id": 3,
+    "topic": "Capital Requirements",
+    "question_ar": "رأس المال المطلوب؟",
+    "answer": "Flexible account funding starting from $100 to $500 paired with strict risk management rules."
+  },
+  {
+    "id": 4,
+    "topic": "Supported Platforms",
+    "question_ar": "منصات التداول المعتمدة؟",
+    "answer": "Webull, Interactive Brokers (IBKR), and TradingView."
+  },
+  {
+    "id": 5,
+    "topic": "Live Session Schedule",
+    "question_ar": "أوقات الجلسات اليومية؟",
+    "answer": "Daily Monday through Friday at 9:30 PM Local Time via Discord VIP & Live Session Gateway."
+  },
+  {
+    "id": 6,
+    "topic": "Offline Workshop Pricing",
+    "question_ar": "أسعار الورشة الحضورية؟",
+    "answer": "Configurable member rate (default $74.39 / 4,000 EGP) and non-member rate (default $111.59 / 6,000 EGP)."
+  },
+  {
+    "id": 7,
+    "topic": "Discord & Scanner Subscription",
+    "question_ar": "اشتراك مجتمع وسكانر الديسكورد؟",
+    "answer": "Configurable monthly membership (default $45/month) via Whop including VIP rooms and scanner alerts."
+  },
+  {
+    "id": 8,
+    "topic": "Private 1-on-1 Coaching",
+    "question_ar": "جلسة المتابعة الخاصة؟",
+    "answer": "Configurable 4-hour 1-on-1 online coaching session (default $100) for portfolio evaluation."
+  },
+  {
+    "id": 9,
+    "topic": "Certified Mentors",
+    "question_ar": "من هم الموجهين؟",
+    "answer": "Configured dynamically from your MENTORS_LIST environment variable (Lead Strategist, Mentor Alpha..Epsilon)."
+  },
+  {
+    "id": 10,
+    "topic": "Methodology",
+    "question_ar": "استراتيجية التداول؟",
+    "answer": "Hyper-Scalping risk framework built on asymmetric return: 'WIN BIG, win small, lose small'."
+  },
+  {
+    "id": 11,
+    "topic": "Signals & Analysis",
+    "question_ar": "التحليلات والتوصيات؟",
+    "answer": "Live educational market setups, scanner triggers, and independent decision-making coaching."
+  },
+  {
+    "id": 12,
+    "topic": "Subscription Management",
+    "question_ar": "إدارة الاشتراك؟",
+    "answer": "Automated recurring billing via Whop Portal with self-service cancellation or upgrades."
+  },
+  {
+    "id": 13,
+    "topic": "Omnichannel Sync",
+    "question_ar": "تزامن الديسكورد والتيليجرام؟",
+    "answer": "Unified Omnichannel AI Engine synchronizes Discord and Telegram bots in real time."
+  },
+  {
+    "id": 14,
+    "topic": "Billing Support",
+    "question_ar": "دعم الفواتير والدفع؟",
+    "answer": "Contact the PR Support Bot or open a support ticket in Discord #pr-desk."
+  },
+  {
+    "id": 15,
+    "topic": "Workshop Certification",
+    "question_ar": "شهادة إتمام الورشة؟",
+    "answer": "Graduates receive an official White-Label Academy Completion Certificate upon practical review."
+  },
+  {
+    "id": 16,
+    "topic": "Schedule Flexibility",
+    "question_ar": "المناسبة للموظفين؟",
+    "answer": "Evening live sessions fit full-time working schedules seamlessly."
+  },
+  {
+    "id": 17,
+    "topic": "Live Session Access Link",
+    "question_ar": "رابط الجلسة المباشرة؟",
+    "answer": "Single-use encrypted access invites are dispatched automatically 15 minutes prior to session start."
+  }
+]

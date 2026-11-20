@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Tradesejon | استمارة التقييم المالي وخطة التداول الذكية</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #050811;
+  --card: #0d1324;
+  --accent: #f59e0b;
+  --accent-glow: rgba(245, 158, 11, 0.25);
+  --blue: #2563eb;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --border: #1e293b;
+  --success: #10b981;
+  --error: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: 'Cairo', sans-serif;
+  background: radial-gradient(circle at top right, #111a36 0%, var(--bg) 70%);
+  color: var(--text);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 14px;
+}
+.container {
+  width: 100%;
+  max-width: 680px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 34px 28px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 30px var(--accent-glow);
+}
+.brand-header { text-align: center; margin-bottom: 24px; }
+.badge {
+  display: inline-block;
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+h1 {
+  font-size: 1.65rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, #fff, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+p.sub { color: var(--muted); font-size: 0.92rem; line-height: 1.6; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.full { grid-column: 1 / -1; }
+.form-group { position: relative; display: flex; flex-direction: column; }
+label { display: block; font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; color: #e2e8f0; }
+.input-wrap { position: relative; width: 100%; }
+input, select, textarea {
+  width: 100%;
+  background: #070b14;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 14px;
+  min-height: 46px;
+  border-radius: 10px;
+  font-family: 'Cairo', sans-serif;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+input.is-valid {
+  border-color: var(--success);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+}
+input.is-invalid, select.is-invalid, textarea.is-invalid {
+  border: 2px solid #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.35), inset 0 0 8px rgba(239, 68, 68, 0.15) !important;
+  color: #fff !important;
+  animation: fieldShake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes fieldShake {
+  10%, 90% { transform: translate3d(-1px, 0, 0); }
+  20%, 80% { transform: translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-3px, 0, 0); }
+  40%, 60% { transform: translate3d(3px, 0, 0); }
+}
+.form-group.has-error label {
+  color: #ef4444 !important;
+  font-weight: 900 !important;
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+}
+.field-msg {
+  display: none;
+  font-size: 0.82rem;
+  margin-top: 6px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+.field-msg.error {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.15) !important;
+  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  border-radius: 6px !important;
+  padding: 4px 10px !important;
+  display: inline-block !important;
+}
+.field-msg.success {
+  color: #34d399;
+  display: block;
+}
+.server-alert {
+  display: none;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.22) !important;
+  border: 2px solid #ef4444 !important;
+  color: #fee2e2 !important;
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin-top: 18px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.45) !important;
+  animation: fieldShake 0.4s ease;
+}
+.submit-btn {
+  width: 100%;
+  margin-top: 20px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #050811;
+  font-family: 'Cairo', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 900;
+  padding: 14px;
+  min-height: 50px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px var(--accent-glow);
+}
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.result-box {
+  display: none;
+  margin-top: 24px;
+  padding: 24px;
+  border-radius: 16px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--success);
+  text-align: center;
+}
+.result-box h3 { color: var(--success); margin-bottom: 12px; font-size: 1.25rem; font-weight: 900; }
+.tg-link {
+  display: inline-block;
+  margin-top: 16px;
+  background: #2563eb;
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: 0.2s;
+}
+.tg-link:hover { background: #1d4ed8; }
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; gap: 14px; }
+  .container { padding: 22px 16px; border-radius: 18px; }
+  h1 { font-size: 1.35rem; }
+}
+
+/* Award-Winning Institutional Glassmorphism for Trader Onboarding Form */
+body {
+  background-color: #03050c !important;
+  background-image:
+    radial-gradient(at 20% 10%, rgba(245, 158, 11, 0.12) 0px, transparent 48%),
+    radial-gradient(at 80% 85%, rgba(56, 189, 248, 0.09) 0px, transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px !important;
+}
+.container {
+  background: linear-gradient(165deg, rgba(15, 23, 42, 0.85) 0%, rgba(7, 11, 20, 0.94) 100%) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1px solid rgba(245, 158, 11, 0.28) !important;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.75), 0 0 40px rgba(245, 158, 11, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+
+/* ==========================================================================
+   THINKING ORBS 3D & OBSIDIAN GLASS THEME (#070707 + INTERACTIVE TILT)
+   ========================================================================== */
+:root {
+  --bg: #070707 !important;
+  --panel: rgba(20, 20, 22, 0.72) !important;
+  --card: rgba(29, 29, 29, 0.42) !important;
+  --border: rgba(44, 47, 54, 0.48) !important;
+}
+
+body {
+  background-color: #070707 !important;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.045) 0%, transparent 55%),
+    radial-gradient(circle at 85% 20%, rgba(245, 158, 11, 0.06) 0%, transparent 45%),
+    radial-gradient(circle at 15% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 45%) !important;
+  perspective: 1200px;
+}
+
+.kpi-card, .chat-box, .mini-chart-panel, .table-wrap, .stat-box, .toolbar-card, .container, .coll-item {
+  background: rgba(29, 29, 29, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 54, 0.38),
+    inset 0 0 50px 0 rgba(255, 255, 255, 0.015),
+    0 18px 40px -15px rgba(0, 0, 0, 0.75) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(22px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%) !important;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease !important;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.kpi-card::before, .stat-box::before, .thinking-orb-pill::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    380px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 255, 255, 0.065),
+    transparent 45%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Official Thinking Orb Pill (Exact match to demo.tsx + 3D interactive controls) */
+.thinking-orb-pill {
+  display: inline-flex;
+  height: 70px;
+  align-items: center;
+  gap: 14px;
+  border-radius: 9999px;
+  padding: 0 24px 0 11px;
+  background: rgba(29, 29, 29, 0.42) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(44, 47, 54, 0.31),
+    inset 0 0 50px 0 rgba(255, 255, 255, 0.012),
+    0 14px 34px rgba(0, 0, 0, 0.65) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.thinking-orb-pill:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.38),
+    inset 0 0 55px 0 rgba(245, 158, 11, 0.04),
+    0 18px 42px rgba(0, 0, 0, 0.8) !important;
+}
+.thinking-orb-canvas-wrap {
+  width: 56px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.thinking-orb-canvas-wrap canvas {
+  width: 56px !important;
+  height: 56px !important;
+  display: block;
+}
+.thinking-orb-status-text {
+  white-space: nowrap;
+  font-size: 1.02rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: rgba(251, 251, 251, 0.62);
+  letter-spacing: 0.2px;
+}
+.orb-state-chip {
+  background: rgba(29, 29, 29, 0.55);
+  border: 1px solid rgba(44, 47, 54, 0.55);
+  color: rgba(251, 251, 251, 0.65);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.orb-state-chip:hover, .orb-state-chip.active {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+
+
+
+
+
+
+/* ==========================================================================
+   GLOWING SHADOW (@property --hue, --rotate, --bg-x, --bg-y) & MINIMAL BLACK
+   Source: components/ui/glowing-shadow.tsx (hsl(260deg 100% 3%) / #03000a)
+   Lazy-Mounted 60fps Architecture:
+   - inherits: false prevents cascade recalculation across the DOM.
+   - Idle buttons have content: none (0 pseudo-elements, 0 GPU layers when idle).
+   - Lights mount LAZILY ONLY on the specific button under mouse :hover!
+   ========================================================================== */
+@property --hue {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --rotate {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-x {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --glow-translate-y {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --bg-size {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+@property --glow-opacity {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+@property --glow-blur {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 3.5;
+}
+@property --glow-scale {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1.5;
+}
+@property --glow-radius {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 100;
+}
+@property --white-shadow {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+@keyframes shadow-pulse {
+  0%, 24%, 46%, 73%, 96% { --white-shadow: 0.5; }
+  12%, 28%, 41%, 63%, 75%, 82%, 98% { --white-shadow: 2.2; }
+  6%, 32%, 57% { --white-shadow: 1.2; }
+  18%, 52%, 88% { --white-shadow: 3.0; }
+}
+
+@keyframes rotate-bg {
+  0% { --bg-x: 0; --bg-y: 0; }
+  25% { --bg-x: 100; --bg-y: 0; }
+  50% { --bg-x: 100; --bg-y: 100; }
+  75% { --bg-x: 0; --bg-y: 100; }
+  100% { --bg-x: 0; --bg-y: 0; }
+}
+
+@keyframes rotate {
+  from { --rotate: -70; --glow-translate-y: -65; }
+  25%, 50%, 60%, 75%, 85% { --glow-translate-y: -65; }
+  to { --rotate: 290; --glow-translate-y: -65; }
+}
+
+@keyframes hue-animation {
+  0% { --hue: 0; }
+  100% { --hue: 360; }
+}
+
+:root {
+  --bg: #020204 !important;
+  --panel: #040308 !important;
+  --card: hsl(260deg 100% 3%) !important;
+  --card-color: hsl(260deg 100% 3%) !important;
+  --border: rgba(255, 255, 255, 0.07) !important;
+  --hue-speed: 1;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+}
+
+html, body {
+  background-color: #020204 !important;
+  background-image: radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.02) 0%, transparent 60%) !important;
+  color: #f8fafc !important;
+}
+
+.sidebar, .topbar, .header-bar, .status-strip, .collections-sidebar, .institutional-pulse-bar, .market-ticker-strip, .chat-header-bar, .chat-input-bar, .markets-toolbar, .modal, .modal-box, .cmd-palette-box, .mobile-bottom-nav {
+  background: #040308 !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Official GlowingShadow Component Classes */
+.glow-container {
+  --card-color: hsl(260deg 100% 3%);
+  --text-color: hsl(260deg 10% 55%);
+  --card-radius: 16px;
+  --border-width: 2px;
+  --bg-size: 1;
+  --hue: 0;
+  --hue-speed: 1;
+  --rotate: 0;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+  --glow-scale: 1.5;
+  --scale-factor: 1;
+  --glow-blur: 4;
+  --glow-opacity: 0;
+  --glow-radius: 100;
+  --glow-rotate-unit: 1deg;
+  position: relative;
+  z-index: 2;
+  border-radius: var(--card-radius);
+  cursor: pointer;
+}
+
+/* Minimal Black Idle State on All Clickable Positions & Buttons (NO lights & 0 extra GPU layers when idle) */
+.btn,
+.nav-btn,
+.kpi-card,
+.ticker-pill,
+.chip-btn,
+.sym-btn,
+.tf-btn,
+.toggle-btn,
+.coll-item,
+.stat-box,
+.session-widget,
+.pulse-metric,
+.cmd-item,
+.m-nav-item,
+.submit-btn,
+.thinking-orb-pill,
+#btnExecCommandHub {
+  --card-color: hsl(260deg 100% 3%);
+  --border-width: 2px;
+  --bg-size: 1;
+  --hue: 0;
+  --hue-speed: 1;
+  --rotate: 0;
+  --animation-speed: 3.2s;
+  --interaction-speed: 0.25s;
+  --white-shadow: 0;
+  background: hsl(260deg 100% 3%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 8px 22px -6px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.18s ease, color 0.16s ease !important;
+}
+
+/* Lazy Unmounted Idle Pseudo-Elements (content: none = 0 GPU memory & 0 paint cost when not hovered) */
+.btn::before,
+.nav-btn::before,
+.kpi-card::before,
+.ticker-pill::before,
+.chip-btn::before,
+.sym-btn::before,
+.tf-btn::before,
+.toggle-btn::before,
+.coll-item::before,
+.stat-box::before,
+.session-widget::before,
+.pulse-metric::before,
+.cmd-item::before,
+.m-nav-item::before,
+.submit-btn::before,
+.thinking-orb-pill::before,
+#btnExecCommandHub::before,
+.btn::after,
+.nav-btn::after,
+.kpi-card::after,
+.ticker-pill::after,
+.chip-btn::after,
+.sym-btn::after,
+.tf-btn::after,
+.toggle-btn::after,
+.coll-item::after,
+.stat-box::after,
+.session-widget::after,
+.pulse-metric::after,
+.cmd-item::after,
+.m-nav-item::after,
+.submit-btn::after,
+.thinking-orb-pill::after,
+#btnExecCommandHub::after {
+  content: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Clean Minimal Active State (Subtle border contrast, NO permanent rainbow lights) */
+.nav-btn.active,
+.ticker-pill.active,
+.sym-btn.active,
+.tf-btn.active,
+.toggle-btn.active,
+.coll-item.active,
+.m-nav-item.active {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+/* Mouse Hover ONLY -> Lazily Mount & Run 60fps GlowingShadow Light on That Single Button */
+.btn:hover,
+.nav-btn:hover,
+.kpi-card:hover,
+.ticker-pill:hover,
+.chip-btn:hover,
+.sym-btn:hover,
+.tf-btn:hover,
+.toggle-btn:hover,
+.coll-item:hover,
+.stat-box:hover,
+.session-widget:hover,
+.pulse-metric:hover,
+.cmd-item:hover,
+.m-nav-item:hover,
+.submit-btn:hover,
+.thinking-orb-pill:hover,
+#btnExecCommandHub:hover {
+  color: #ffffff !important;
+  background: hsl(260deg 100% 4%) !important;
+  isolation: isolate;
+  will-change: transform;
+  box-shadow:
+    0 0 calc(var(--white-shadow, 1.5) * 6px) calc(var(--white-shadow, 1.5) * 1px) rgba(255, 255, 255, 0.14),
+    0 12px 28px -6px rgba(0, 0, 0, 0.95) !important;
+  animation: shadow-pulse calc(var(--animation-speed) * 2) linear infinite;
+  transform: translateY(-1.5px);
+}
+
+.btn:hover::before,
+.nav-btn:hover::before,
+.kpi-card:hover::before,
+.ticker-pill:hover::before,
+.chip-btn:hover::before,
+.sym-btn:hover::before,
+.tf-btn:hover::before,
+.toggle-btn:hover::before,
+.coll-item:hover::before,
+.stat-box:hover::before,
+.session-widget:hover::before,
+.pulse-metric:hover::before,
+.cmd-item:hover::before,
+.m-nav-item:hover::before,
+.submit-btn:hover::before,
+.thinking-orb-pill:hover::before,
+#btnExecCommandHub:hover::before {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  z-index: -1;
+  pointer-events: none;
+  --bg-size: 6;
+  opacity: 1;
+  background: hsl(0deg 0% 10%) radial-gradient(
+    45% 65% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 85%) calc(0% * var(--bg-size)),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 68%) calc(22% * var(--bg-size)),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 52%) calc(45% * var(--bg-size)),
+    transparent 100%
+  );
+  animation: hue-animation var(--animation-speed) linear infinite,
+             rotate-bg var(--animation-speed) linear infinite;
+  animation-play-state: running;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1.5px;
+}
+
+.btn:hover::after,
+.nav-btn:hover::after,
+.kpi-card:hover::after,
+.ticker-pill:hover::after,
+.chip-btn:hover::after,
+.sym-btn:hover::after,
+.tf-btn:hover::after,
+.toggle-btn:hover::after,
+.coll-item:hover::after,
+.stat-box:hover::after,
+.session-widget:hover::after,
+.pulse-metric:hover::after,
+.cmd-item:hover::after,
+.m-nav-item:hover::after,
+.submit-btn:hover::after,
+.thinking-orb-pill:hover::after,
+#btnExecCommandHub:hover::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.85;
+  background: radial-gradient(
+    60% 60% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+    hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 60% / 0.25),
+    transparent 80%
+  );
+  filter: blur(8px);
+  animation: hue-animation var(--animation-speed) linear infinite,
+             rotate-bg var(--animation-speed) linear infinite;
+  animation-play-state: running;
+}
+
+/* Minimal Black Panels & Clickable Table Rows */
+.chat-box, .mini-chart-panel, .table-wrap, .toolbar-card, .container, .doc-card {
+  background: hsl(260deg 100% 3%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important;
+}
+
+table tbody tr {
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04) !important;
+  box-shadow: inset 0 0 18px rgba(255, 255, 255, 0.05);
+}
+
+input, select, textarea {
+  background: #030207 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.1) !important;
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="brand-header">
+    <div id="formThinkingOrbWrap" style="display:none; justify-content:center; margin-bottom:14px;">
+      <div class="thinking-orb-pill" style="height:64px; padding:0 22px 0 9px;">
+        <span class="thinking-orb-canvas-wrap"><canvas id="formOrbCanvas"></canvas></span>
+        <span class="thinking-orb-status-text" style="font-size:0.92rem; color:rgba(251,251,251,0.75);">Thinking….</span>
+      </div>
+    </div>
+    <h1>استمارة دخول Tradesejon Discord Live ($0 مجاناً)</h1>
+    <p class="sub">أدخل بريدك الإلكتروني ورقم هاتفك لاستلام رابط <b>Discord Live</b> المباشر وبطاقة Whop المجانية ($0 بدون بطاقة) على Discord والبريد والتيليجرام فوراً.</p>
+  </div>
+
+  <form id="leadForm" novalidate>
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="full_name">الاسم بالكامل (اختياري)</label>
+        <div class="input-wrap">
+          <input type="text" id="full_name" placeholder="مثال: Member محمود (اختياري)" autocomplete="name">
+        </div>
+        <div class="field-msg" id="nameError">⚠️ يرجى كتابة اسم صحيح أو تركه فارغاً.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">البريد الإلكتروني (Mail) *</label>
+        <div class="input-wrap">
+          <input type="email" id="email" required placeholder="name@example.com" autocomplete="email" dir="ltr" style="text-align:left;">
+        </div>
+        <div class="field-msg" id="emailError">⚠️ يرجى إدخال بريد إلكتروني صحيح (مثال: name@gmail.com).</div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">رقم الهاتف / واتساب *</label>
+        <div class="input-wrap">
+          <input type="tel" id="phone" required placeholder="010xxxxxxxx أو +2010..." autocomplete="tel" dir="ltr" style="text-align:left;">
+        </div>
+        <div class="field-msg" id="phoneError">⚠️ يرجى إدخال رقم هاتف صحيح (مثال: 01012345678 أو كود دولي +966...).</div>
+      </div>
+
+      <div class="form-group">
+        <label for="telegram_user">معرف تيليجرام (اختياري)</label>
+        <div class="input-wrap">
+          <input type="text" id="telegram_user" placeholder="@username" dir="ltr" style="text-align:left;">
+        </div>
+        <div class="field-msg" id="tgError">⚠️ معرف التيليجرام يجب أن يبدأ بـ @ ويحتوي حروفاً أو أرقاماً.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="experience">مستوى الخبرة في التداول *</label>
+        <select id="experience" required>
+          <option value="مبتدئ تماماً (من الصفر)">مبتدئ تماماً (من الصفر)</option>
+          <option value="متوسط (أعرف الأساسيات فقط)">متوسط (أعرف الأساسيات فقط)</option>
+          <option value="متقدم (أحتاج إشارات وإدارة مخاطر احترافية)">متقدم (أحتاج إشارات وإدارة مخاطر احترافية)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="capital">رأس المال المخصص للتداول *</label>
+        <select id="capital" required>
+          <option value="أقل من 500 دولار">أقل من 500 دولار</option>
+          <option value="من 500 إلى 2,000 دولار">من 500 إلى 2,000 دولار</option>
+          <option value="من 2,000 إلى 10,000 دولار">من 2,000 إلى 10,000 دولار</option>
+          <option value="أكثر من 10,000 دولار (محفظة استثمارية كبرى)">أكثر من 10,000 دولار (محفظة استثمارية كبرى)</option>
+        </select>
+      </div>
+
+      <div class="form-group full">
+        <label for="markets">الأسواق المفضلة لك *</label>
+        <select id="markets" required>
+          <option value="الذهب والمعادن (XAUUSD)">الذهب والمعادن (XAUUSD)</option>
+          <option value="العملات الأجنبية (Forex)">العملات الأجنبية (Forex)</option>
+          <option value="العملات الرقمية (Crypto)">العملات الرقمية (Crypto)</option>
+          <option value="المؤشرات والأسهم الأمريكية (Indices & Stocks)">المؤشرات والأسهم الأمريكية (Indices & Stocks)</option>
+          <option value="جميع الأسواق (محفظة متنوعة)">جميع الأسواق (محفظة متنوعة)</option>
+        </select>
+      </div>
+
+      <div class="form-group full">
+        <label for="challenge">ما هو أكبر تحدٍ تواجهه في التداول حالياً؟ (اختياري)</label>
+        <textarea id="challenge" rows="3" placeholder="اختياري: التسرع في الدخول، نقاط الدخول، أو إدارة رأس المال..."></textarea>
+        <div class="field-msg" id="challengeError">⚠️ يرجى توضيح التحدي بإيجاز أو تركه فارغاً.</div>
+      </div>
+    </div>
+
+    <div class="server-alert" id="serverAlert"></div>
+
+    <button type="submit" class="submit-btn" id="submitBtn">🎙️ احصل على رابط Discord Live الآن ($0 مجاناً)</button>
+  </form>
+
+  <div class="result-box" id="resultBox">
+    <h3>✅ تم التفعيل المجاني بنجاح — رابط Discord Live جاهز!</h3>
+    <p id="resultText" style="line-height:1.8; font-size:0.95rem; text-align:right;"></p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:16px;">
+      <a href="https://discord.com/channels/900000000000000001/900000000000000002" id="discordLiveBtn" target="_blank" class="tg-link" style="background:#5865F2; margin-top:0;">🎙️ دخول Discord Live المباشر</a>
+      <a href="https://whop.com/checkout/plan_TEMPLATE_01" id="whopFreeBtn" target="_blank" class="tg-link" style="background:#10b981; margin-top:0;">🎁 بطاقة Whop المجانية ($0)</a>
+      <a href="https://t.me/YOUR_TRADER_BOT?start=form_vip" target="_blank" class="tg-link" style="margin-top:0;">📲 استلام الرابط على تيليجرام</a>
+    </div>
+  </div>
+</div>
+
+<script>
+
+function toEnglishDigits(val) {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
+    .replace(/[\u06F0-\u06F9]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48));
+}
+
+// Validation Rules & Patterns
+const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+const EG_PHONE_REGEX = /^(?:\+?20|0)?1[0125]\d{8}$/;
+const INTL_PHONE_REGEX = /^\+?[1-9]\d{7,14}$/;
+const TG_REGEX = /^@[a-zA-Z0-9_]{3,32}$/;
+
+const nameInput = document.getElementById('full_name');
+const emailInput = document.getElementById('email');
+const phoneInput = document.getElementById('phone');
+const tgInput = document.getElementById('telegram_user');
+const challengeInput = document.getElementById('challenge');
+const serverAlert = document.getElementById('serverAlert');
+
+function setFieldState(input, errorEl, isValid, message) {
+  const grp = input.closest('.form-group');
+  if (isValid) {
+    input.classList.remove('is-invalid');
+    input.classList.add('is-valid');
+    if (grp) grp.classList.remove('has-error');
+    if (errorEl) {
+      errorEl.classList.remove('error');
+      errorEl.style.display = 'none';
+    }
+  } else {
+    input.classList.remove('is-valid');
+    input.classList.add('is-invalid');
+    if (grp) grp.classList.add('has-error');
+    if (errorEl) {
+      if (message) errorEl.textContent = message;
+      errorEl.classList.add('error');
+      errorEl.style.display = 'inline-block';
+    }
+  }
+}
+
+function validateName() {
+  const val = nameInput.value.trim();
+  const isValid = val === '' || val.length >= 2;
+  setFieldState(nameInput, document.getElementById('nameError'), isValid);
+  return isValid;
+}
+
+function validateEmail() {
+  let val = emailInput.value.trim().toLowerCase();
+  // Auto-correct accidental .comm
+  if (val.endsWith('.comm')) {
+    val = val.slice(0, -1);
+    emailInput.value = val;
+  }
+  const isValid = EMAIL_REGEX.test(val);
+  setFieldState(emailInput, document.getElementById('emailError'), isValid);
+  return isValid;
+}
+
+function validatePhone() {
+  let raw = phoneInput.value.trim();
+  // Normalize by stripping spaces, hyphens, and brackets
+  const clean = raw.replace(/[\s\-\(\)]/g, '');
+  const isEg = EG_PHONE_REGEX.test(clean);
+  const isIntl = INTL_PHONE_REGEX.test(clean);
+  const isValid = isEg || isIntl;
+  setFieldState(phoneInput, document.getElementById('phoneError'), isValid);
+  return isValid;
+}
+
+function validateTelegram() {
+  let val = tgInput.value.trim();
+  if (!val) {
+    tgInput.classList.remove('is-invalid', 'is-valid');
+    document.getElementById('tgError').style.display = 'none';
+    return true;
+  }
+  if (!val.startsWith('@')) {
+    val = '@' + val;
+    tgInput.value = val;
+  }
+  const isValid = TG_REGEX.test(val);
+  setFieldState(tgInput, document.getElementById('tgError'), isValid);
+  return isValid;
+}
+
+function validateChallenge() {
+  const val = challengeInput.value.trim();
+  const isValid = val === '' || val.length >= 2;
+  setFieldState(challengeInput, document.getElementById('challengeError'), isValid);
+  return isValid;
+}
+
+// Live feedback on typing & blur
+nameInput.addEventListener('input', validateName);
+nameInput.addEventListener('blur', validateName);
+
+emailInput.addEventListener('input', validateEmail);
+emailInput.addEventListener('blur', validateEmail);
+
+phoneInput.addEventListener('input', validatePhone);
+phoneInput.addEventListener('blur', validatePhone);
+
+tgInput.addEventListener('input', validateTelegram);
+tgInput.addEventListener('blur', validateTelegram);
+
+challengeInput.addEventListener('input', validateChallenge);
+challengeInput.addEventListener('blur', validateChallenge);
+
+// Form Submit Handling
+document.getElementById('leadForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  serverAlert.style.display = 'none';
+
+  const isNameOk = validateName();
+  const isEmailOk = validateEmail();
+  const isPhoneOk = validatePhone();
+  const isTgOk = validateTelegram();
+  const isChallengeOk = validateChallenge();
+
+  if (!isNameOk || !isEmailOk || !isPhoneOk || !isTgOk || !isChallengeOk) {
+    if (!isNameOk) nameInput.focus();
+    else if (!isEmailOk) emailInput.focus();
+    else if (!isPhoneOk) phoneInput.focus();
+    else if (!isTgOk) tgInput.focus();
+    else if (!isChallengeOk) challengeInput.focus();
+    serverAlert.textContent = '❌ يرجى مراجعة وتصحيح الحقول المحددة باللون الأحمر أدناه قبل المتابعة.';
+    serverAlert.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التحقق وتحليل بياناتك المالية عبر AIOS...';
+  const orbW = document.getElementById('formThinkingOrbWrap');
+  if (orbW) orbW.style.display = 'flex';
+
+  const cleanPhone = phoneInput.value.trim().replace(/[\s\-\(\)]/g, '');
+  let cleanEmail = emailInput.value.trim().toLowerCase();
+  if (cleanEmail.endsWith('.comm')) cleanEmail = cleanEmail.slice(0, -1);
+  let cleanTg = tgInput.value.trim();
+  if (cleanTg && !cleanTg.startsWith('@')) cleanTg = '@' + cleanTg;
+
+  const payload = {
+    full_name: nameInput.value.trim() || cleanEmail.split('@')[0],
+    email: cleanEmail,
+    phone: cleanPhone,
+    telegram_user: cleanTg,
+    experience: document.getElementById('experience').value,
+    capital: document.getElementById('capital').value,
+    markets: document.getElementById('markets').value,
+    challenge: challengeInput.value.trim() || 'Tradesejon Discord Live VIP'
+  };
+
+  try {
+    const res = await fetch('/api/submit-form', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || data.ok === false) {
+      if (data.field === 'email') setFieldState(emailInput, document.getElementById('emailError'), false, data.error);
+      if (data.field === 'phone') setFieldState(phoneInput, document.getElementById('phoneError'), false, data.error);
+      if (data.field === 'telegram_user') setFieldState(tgInput, document.getElementById('tgError'), false, data.error);
+      throw new Error(data.error || 'حدث خطأ في البيانات المدخلة، يرجى مراجعة الحقول المحددة باللون الأحمر.');
+    }
+
+    if (orbW) orbW.style.display = 'none';
+    document.getElementById('leadForm').style.display = 'none';
+    const box = document.getElementById('resultBox');
+    box.style.display = 'block';
+    const isPaid = Boolean(data.paid);
+    const liveUrl = data.discord_live_url || '';
+    const whopUrl = data.whop_checkout_url || 'https://whop.com/checkout/plan_TEMPLATE_01';
+    const marhabanUrl = data.discord_marhaban_invite || 'https://discord.gg/YOUR_INVITE_CODE';
+    const dlBtn = document.getElementById('discordLiveBtn');
+    const whBtn = document.getElementById('whopFreeBtn');
+
+    if (isPaid && liveUrl) {
+      if (dlBtn) { dlBtn.href = liveUrl; dlBtn.style.display = 'inline-block'; }
+      if (whBtn) { whBtn.href = whopUrl; whBtn.textContent = '✅ اشتراكك مدفوع ومؤكد 100%'; }
+      document.getElementById('resultText').innerHTML =
+        `🎉 أهلاً بك يا <strong>${payload.full_name}</strong> في مجتمع Tradesejon Workshop!<br>` +
+        `✅ <strong>تم التحقق من الدفع 100%:</strong> تم تفعيل دورك وقنواتك بنجاح.<br>` +
+        `🔗 <strong>رابط Workshop المباشر الحصري بك:</strong> <a href="${liveUrl}" target="_blank" style="color:#38bdf8;">${liveUrl}</a><br><br>` +
+        `🕒 <strong>موعد الجلسة الحية:</strong> <strong>${data.session_time || '09:30 PM بتوقيت القاهرة'}</strong>.<br>` +
+        `تم إرسال كافة التفاصيل إلى بريدك (<code>${payload.email}</code>) ورقمك (<code>${payload.phone}</code>).`;
+    } else {
+      if (dlBtn) { dlBtn.href = marhabanUrl; dlBtn.textContent = '💬 دخول قناة #marhaban و #prospects'; }
+      if (whBtn) { whBtn.href = whopUrl; whBtn.textContent = '💳 إتمام الدفع عبر Whop لتفعيل Workshop'; }
+      document.getElementById('resultText').innerHTML =
+        `👋 أهلاً بك يا <strong>${payload.full_name}</strong>.<br>` +
+        `✅ تم تسجيل بياناتك بنجاح وتم منحك دور <strong>Prospect</strong>.<br>` +
+        `🔒 <strong>تنبيه الأمان (100% Payment Gate):</strong> رابط الورشة المباشر وقناة #workshop-channel يفتحان تلقائياً فور تأكيد الدفع عبر Whop.<br>` +
+        `💳 <strong>رابط إتمام الاشتراك عبر Whop:</strong> <a href="${whopUrl}" target="_blank" style="color:#34d399; font-weight:700;">${whopUrl}</a><br><br>` +
+        `🕒 <strong>موعد الجلسة الحية:</strong> <strong>${data.session_time || '09:30 PM بتوقيت القاهرة'}</strong>.<br>` +
+        `فريق الدعم والذكاء الاصطناعي في انتظارك في قناة <code>#prospects</code> لمساعدتك في أي استفسار.`;
+    }
+  } catch (err) {
+    if (orbW) orbW.style.display = 'none';
+    serverAlert.textContent = err.message || 'حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.';
+    serverAlert.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '🎙️ احصل على رابط Discord Live الآن ($0 مجاناً)';
+  }
+});
+</script>
+
+<script src="/thinking-orbs-3d.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  const cFm = document.getElementById('formOrbCanvas');
+  if (cFm && window.TradesejonThinkingOrb) {
+    window.formOrb = new window.TradesejonThinkingOrb(cFm, { state: 'composing', size: 54, theme: 'dark', color: '#f59e0b' });
+  }
+  if (window.initTradesejon3D) window.initTradesejon3D();
+});
+</script>
+
+</body>
+</html>

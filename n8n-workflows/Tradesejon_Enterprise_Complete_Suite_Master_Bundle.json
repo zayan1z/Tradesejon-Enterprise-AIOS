@@ -1,0 +1,1849 @@
+{
+  "name": "Tradesejon_Enterprise_Complete_Suite_Master_Bundle",
+  "version": "4.0.0-whitelabel",
+  "description": "100% White-Label 21-Workflow Enterprise Suite (Zero Third-Party Brand References, Zero Credentials)",
+  "workflows": [
+    {
+      "id": "tradesejon-wf-01-ceo-agent",
+      "name": "01_Tradesejon_CEO_Autonomous_AI_Agent",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-ceo",
+            "responseMode": "lastNode"
+          },
+          "id": "ceo-wh",
+          "name": "CEO Webhook (Telegram & Web)",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const req = $input.first().json || {};\nconst headers = Object.fromEntries(Object.entries(req.headers || {}).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst body = req.body || req || {};\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nconst token = String(headers['x-tradesejon-secret'] || headers['x-ceo-token'] || '');\nconst expectedSecret = String($env.TRADESAJON_BRIDGE_SECRET || '');\nconst tgMsg = body.message || (body.callback_query ? body.callback_query.message : null);\nconst tgFromId = String(body.message?.from?.id || body.callback_query?.from?.id || '');\nconst tgChatId = String(tgMsg?.chat?.id || body.chat_id || '');\nconst authCeoIds = String($env.CEO_USER_IDS || '').split(/[,;\\s]+/).map(s => s.trim()).filter(Boolean);\n\nconst isAuthSecret = expectedSecret && token === expectedSecret;\nconst isAuthTg = tgFromId && authCeoIds.includes(tgFromId);\nif ((expectedSecret || authCeoIds.length > 0) && !isAuthSecret && !isAuthTg) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'Unauthorized executive access.' } }];\n}\n\nlet text = String(body.callback_query?.data || body.message?.text || body.command || body.query || '').trim();\nconst voiceFileId = body.message?.voice?.file_id;\nconst tgCeoToken = $env.TELEGRAM_CEO_BOT_TOKEN || '';\nconst groqKey = $env.GROQ_API_KEY || '';\n\nif (!text && voiceFileId && tgCeoToken && groqKey) {\n  try {\n    const gf = await fetch(`https://api.telegram.org/bot${tgCeoToken}/getFile?file_id=${voiceFileId}`).then(r => r.json());\n    if (gf.ok && gf.result?.file_path) {\n      const audioRes = await fetch(`https://api.telegram.org/file/bot${tgCeoToken}/${gf.result.file_path}`);\n      const blob = await audioRes.blob();\n      const fd = new FormData();\n      fd.append('file', blob, 'voice.ogg');\n      fd.append('model', 'whisper-large-v3');\n      fd.append('language', 'ar');\n      const stt = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {\n        method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}` }, body: fd\n      }).then(r => r.json());\n      if (stt.text) text = stt.text.trim();\n    }\n  } catch (e) {}\n}\n\nasync function replyTelegram(msgText) {\n  if (!tgChatId || !tgCeoToken) return;\n  await fetch(`https://api.telegram.org/bot${tgCeoToken}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: tgChatId, text: msgText, parse_mode: 'HTML' })\n  }).catch(() => null);\n}\n\nif (!text || text === '/start' || text === '/menu') {\n  const welcome = `👑 <b>Executive Command Center — ${brand} AIOS</b>\\n\\nSend any executive command in English or Egyptian Arabic:\\n• <code>/kpis</code> — Live CRM Metrics\\n• <i>What is Gold and Bitcoin price?</i>\\n• <i>Send to user@domain on discord telling him session is 9:30 PM</i>`;\n  await replyTelegram(welcome);\n  return [{ json: { ok: true, reply: welcome } }];\n}\n\nconst BRAND = $env.BRAND_NAME || \"Tradesejon\";\nconst MENTORS = $env.MENTORS_LIST || \"Senior Lead Strategist, Mentor Alpha, Mentor Beta, Mentor Gamma, Mentor Delta\";\nconst PLATFORMS = $env.SUPPORTED_PLATFORMS || \"Webull, Interactive Brokers (IBKR), TradingView\";\nconst FAQS = [\n  { q: \"مبتدئ في التداول / الفيديوهات\", a: `في ${BRAND} بنبدأ معاك من الصفر بخطة تدريبية منظمة وتطبيق عملي لايف عشان تتقن استراتيجية الـ Hyper-Scalping خطوة بخطوة.` },\n  { q: \"ايه المتطلبات عشان ابدأ؟\", a: \"لابتوب أو كمبيوتر، إنترنت مستقر، والتفرغ لحضور الجلسات اللايف المباشرة.\" },\n  { q: \"رأس المال المطلوب للبدء؟\", a: \"تقدر تبدأ بمرونة من $100 إلى $500 مع إدارة صارمة لرأس المال (WIN BIG, win small, lose small).\" },\n  { q: \"منصات وبرامج التداول المعتمدة؟\", a: `ندعم رسمياً منصات: ${PLATFORMS}.` },\n  { q: \"أوقات الجلسات اليومية المباشرة؟\", a: $env.LIVE_SESSION_SCHEDULE || \"يومياً من الإثنين للجمعة الساعة 9:30 مساءً عبر Discord VIP و Zoom.\" },\n  { q: \"أسعار ورشة التداول الأوفلاين؟\", a: `${$env.WORKSHOP_MEMBER_PRICE || '4,000'} جنيه ($74.39) للأعضاء، و ${$env.WORKSHOP_NONMEMBER_PRICE || '6,000'} جنيه ($111.59) لغير المشتركين.` },\n  { q: \"اشتراك مجتمع وسكانر الديسكورد؟\", a: `$${$env.VIP_MONTHLY_USD || '45'} شهرياً عبر Whop شاملة قنوات الـ VIP وسكانر الصفقات اللحظي.` },\n  { q: \"جلسة المتابعة الخاصة 4 ساعات؟\", a: `جلسة Online 1-on-1 لمدة 4 ساعات بقيمة $${$env.PRIVATE_SESSION_USD || '100'} شاملة مراجعة المحفظة والتطبيق المباشر.` },\n  { q: \"من هم الموجهين والمدربين؟\", a: `فريق التوجيه المعتمد في ${BRAND}: ${MENTORS}.` },\n  { q: \"طريقة وأسلوب التداول؟\", a: \"استراتيجية الـ Hyper-Scalping بمبدأ WIN BIG, win small, lose small.\" },\n  { q: \"هل يوجد توصيات شراء وبيع مباشرة؟\", a: \"بنوفرلك تحليلات لايف ومناطق دخول احترافية وسكانر لحظي مع تدريبك على القرار المستقل.\" },\n  { q: \"كيفية تجديد الاشتراك أو الترقية؟\", a: \"عبر بوابة الدفع الرسمية Whop بشكل تلقائي بالكامل وبمرونة الإلغاء بأي وقت.\" },\n  { q: \"هل الديسكورد متصل بالتيليجرام؟\", a: `نعم، منظومة ${BRAND} Omnichannel تربط الديسكورد والتيليجرام بشكل لحظي متزامن.` },\n  { q: \"ماذا أفعل لو واجهت مشكلة في الدفع؟\", a: \"تواصل مع بوت الدعم الفني أو افتح تذكرة في روم #pr-desk في الديسكورد.\" },\n  { q: \"هل متوفر شهادة بعد الورشة؟\", a: `نعم، يحصل الخريج على شهادة إتمام البرنامج التدريبي المعتمد من ${BRAND}.` },\n  { q: \"هل التداول مناسب للموظفين؟\", a: \"نعم، جلساتنا المسائية الساعة 9:30 مساءً بتوقيت القاهرة تناسب جدول العمل اليومي.\" },\n  { q: \"كيف أحصل على رابط الجلسة المباشرة؟\", a: \"يرسل الرابط المشفر تلقائياً عبر البوت قبل بدء الجلسة بـ 15 دقيقة.\" }\n];\nfor (const f of FAQS) {\n  if (text.includes(f.q) || f.q.split(' ').filter(w => w.length > 3).filter(w => text.includes(w)).length >= 2) {\n    const r = `💡 <b>${brand} Official Knowledge Base:</b>\\n\\n${f.a}`;\n    await replyTelegram(r);\n    return [{ json: { ok: true, matched_faq: true, reply: r } }];\n  }\n}\n\nconst isSend = /(?:eb3at|ab3at|send|deliver|ابعت|ارسل|وصل)/i.test(text);\nconst wantsDiscord = /(?:discord|ديسكورد|3la\\s*discord)/i.test(text);\nif (isSend && wantsDiscord) {\n  const discordToken = $env.DISCORD_BOT_TOKEN || '';\n  if (!discordToken) {\n    const errReply = \"⚠️ Discord delivery blocked: DISCORD_BOT_TOKEN not configured. Unverified confirmation suppressed.\";\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  let discordUserId = (text.match(/\\b\\d{17,19}\\b/) || [])[0] || '';\n  const emailMatch = (text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/) || [])[0] || '';\n  if (!discordUserId && emailMatch && $env.MONGODB_URI) {\n    try {\n      const { MongoClient } = require('mongodb');\n      const c = new MongoClient($env.MONGODB_URI);\n      await c.connect();\n      const doc = await c.db($env.MONGODB_DB || 'tradesejon_prod').collection('members').findOne({ email: emailMatch.toLowerCase() });\n      discordUserId = doc?.discord_user_id || '';\n      await c.close();\n    } catch (e) {}\n  }\n  if (!discordUserId) {\n    const errReply = `⚠️ Discord User ID not found for target (${emailMatch || 'unspecified'}). Confirmation blocked.`;\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  const msgMatch = text.match(/(?:2ollo|2olo|قوله|بلغه|en|inn|that|saying)\\s+(.+)$/i);\n  const msgBody = msgMatch ? msgMatch[1].trim() : text;\n  const dmCh = await fetch('https://discord.com/api/v10/users/@me/channels', {\n    method: 'POST', headers: { 'Authorization': `Bot ${discordToken}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ recipient_id: discordUserId })\n  }).then(r => r.json());\n  if (!dmCh.id) {\n    const errReply = `⚠️ Discord DM channel rejected: ${dmCh.message || 'Forbidden'}. Confirmation blocked.`;\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  const sent = await fetch(`https://discord.com/api/v10/channels/${dmCh.id}/messages`, {\n    method: 'POST', headers: { 'Authorization': `Bot ${discordToken}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ content: msgBody })\n  }).then(r => r.json());\n  if (!sent.id) {\n    const errReply = `⚠️ Discord message delivery failed: ${sent.message || 'Unknown error'}. Confirmation blocked.`;\n    await replyTelegram(errReply);\n    return [{ json: { ok: false, delivered: false, reply: errReply } }];\n  }\n  const okReply = `✅ Verified 100% Delivered via Discord!\\n🆔 User: <code>${discordUserId}</code>\\n📌 Message ID: <code>${sent.id}</code>`;\n  await replyTelegram(okReply);\n  return [{ json: { ok: true, delivered: true, messageId: sent.id, reply: okReply } }];\n}\n\nif (/(?:سعر|كام|gold|btc|الذهب|بيتكوين|اسعار|price)/i.test(text)) {\n  let btc = 'Unavailable', gold = 'Unavailable';\n  try {\n    const bRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT').then(r => r.json());\n    if (bRes.price) btc = '$' + Number(bRes.price).toLocaleString('en-US', { maximumFractionDigits: 2 });\n  } catch (e) {}\n  try {\n    const gRes = await fetch('https://data-asg.goldprice.org/dbXRates/USD').then(r => r.json());\n    if (gRes.items?.[0]?.xauPrice) gold = '$' + Number(gRes.items[0].xauPrice).toLocaleString('en-US', { maximumFractionDigits: 2 });\n  } catch (e) {}\n  const mktReply = `📊 <b>Live Market Prices (${brand}):</b>\\n• 🪙 Gold (XAU/USD): ${gold}\\n• ₿ Bitcoin (BTC/USD): ${btc}`;\n  await replyTelegram(mktReply);\n  return [{ json: { ok: true, gold, btc, reply: mktReply } }];\n}\n\nlet finalReply = `Command received by ${brand} AIOS. Configure GROQ_API_KEY in .env to enable advanced generative execution.`;\nif (groqKey) {\n  const llm = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      temperature: 0.2,\n      messages: [\n        { role: 'system', content: `You are ${brand} CEO Autonomous AI Agent. Respond in executive Egyptian Arabic if input is Arabic/Franco, otherwise English. Platforms: ${PLATFORMS}. Mentors: ${MENTORS}. Never fabricate delivery confirmations or statistics.` },\n        { role: 'user', content: text }\n      ]\n    })\n  }).then(r => r.json()).catch(() => ({}));\n  if (llm.choices?.[0]?.message?.content) finalReply = llm.choices[0].message.content;\n}\n\nawait replyTelegram(finalReply);\nreturn [{ json: { ok: true, reply: finalReply } }];"
+          },
+          "id": "ceo-brain",
+          "name": "Autonomous Executive AI & Dispatch",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            380,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "CEO Webhook (Telegram & Web)": {
+          "main": [
+            [
+              {
+                "node": "Autonomous Executive AI & Dispatch",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "ceo",
+        "white-label"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-02-pr-agent",
+      "name": "02_Tradesejon_PR_Community_AI_Agent_17FAQs",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-pr",
+            "responseMode": "lastNode"
+          },
+          "id": "pr-wh",
+          "name": "PR Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst text = String(body.message?.text || body.query || '').trim();\nconst chatId = String(body.message?.chat?.id || body.chat_id || '');\nconst prToken = $env.TELEGRAM_PR_BOT_TOKEN || '';\nconst groqKey = $env.GROQ_API_KEY || '';\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nasync function sendPrReply(msg) {\n  if (chatId && prToken) {\n    await fetch(`https://api.telegram.org/bot${prToken}/sendMessage`, {\n      method: 'POST', headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'HTML' })\n    }).catch(() => null);\n  }\n}\n\nconst BRAND = $env.BRAND_NAME || \"Tradesejon\";\nconst MENTORS = $env.MENTORS_LIST || \"Senior Lead Strategist, Mentor Alpha, Mentor Beta, Mentor Gamma, Mentor Delta\";\nconst PLATFORMS = $env.SUPPORTED_PLATFORMS || \"Webull, Interactive Brokers (IBKR), TradingView\";\nconst FAQS = [\n  { q: \"مبتدئ في التداول / الفيديوهات\", a: `في ${BRAND} بنبدأ معاك من الصفر بخطة تدريبية منظمة وتطبيق عملي لايف عشان تتقن استراتيجية الـ Hyper-Scalping خطوة بخطوة.` },\n  { q: \"ايه المتطلبات عشان ابدأ؟\", a: \"لابتوب أو كمبيوتر، إنترنت مستقر، والتفرغ لحضور الجلسات اللايف المباشرة.\" },\n  { q: \"رأس المال المطلوب للبدء؟\", a: \"تقدر تبدأ بمرونة من $100 إلى $500 مع إدارة صارمة لرأس المال (WIN BIG, win small, lose small).\" },\n  { q: \"منصات وبرامج التداول المعتمدة؟\", a: `ندعم رسمياً منصات: ${PLATFORMS}.` },\n  { q: \"أوقات الجلسات اليومية المباشرة؟\", a: $env.LIVE_SESSION_SCHEDULE || \"يومياً من الإثنين للجمعة الساعة 9:30 مساءً عبر Discord VIP و Zoom.\" },\n  { q: \"أسعار ورشة التداول الأوفلاين؟\", a: `${$env.WORKSHOP_MEMBER_PRICE || '4,000'} جنيه ($74.39) للأعضاء، و ${$env.WORKSHOP_NONMEMBER_PRICE || '6,000'} جنيه ($111.59) لغير المشتركين.` },\n  { q: \"اشتراك مجتمع وسكانر الديسكورد؟\", a: `$${$env.VIP_MONTHLY_USD || '45'} شهرياً عبر Whop شاملة قنوات الـ VIP وسكانر الصفقات اللحظي.` },\n  { q: \"جلسة المتابعة الخاصة 4 ساعات؟\", a: `جلسة Online 1-on-1 لمدة 4 ساعات بقيمة $${$env.PRIVATE_SESSION_USD || '100'} شاملة مراجعة المحفظة والتطبيق المباشر.` },\n  { q: \"من هم الموجهين والمدربين؟\", a: `فريق التوجيه المعتمد في ${BRAND}: ${MENTORS}.` },\n  { q: \"طريقة وأسلوب التداول؟\", a: \"استراتيجية الـ Hyper-Scalping بمبدأ WIN BIG, win small, lose small.\" },\n  { q: \"هل يوجد توصيات شراء وبيع مباشرة؟\", a: \"بنوفرلك تحليلات لايف ومناطق دخول احترافية وسكانر لحظي مع تدريبك على القرار المستقل.\" },\n  { q: \"كيفية تجديد الاشتراك أو الترقية؟\", a: \"عبر بوابة الدفع الرسمية Whop بشكل تلقائي بالكامل وبمرونة الإلغاء بأي وقت.\" },\n  { q: \"هل الديسكورد متصل بالتيليجرام؟\", a: `نعم، منظومة ${BRAND} Omnichannel تربط الديسكورد والتيليجرام بشكل لحظي متزامن.` },\n  { q: \"ماذا أفعل لو واجهت مشكلة في الدفع؟\", a: \"تواصل مع بوت الدعم الفني أو افتح تذكرة في روم #pr-desk في الديسكورد.\" },\n  { q: \"هل متوفر شهادة بعد الورشة؟\", a: `نعم، يحصل الخريج على شهادة إتمام البرنامج التدريبي المعتمد من ${BRAND}.` },\n  { q: \"هل التداول مناسب للموظفين؟\", a: \"نعم، جلساتنا المسائية الساعة 9:30 مساءً بتوقيت القاهرة تناسب جدول العمل اليومي.\" },\n  { q: \"كيف أحصل على رابط الجلسة المباشرة؟\", a: \"يرسل الرابط المشفر تلقائياً عبر البوت قبل بدء الجلسة بـ 15 دقيقة.\" }\n];\nfor (const f of FAQS) {\n  if (text.includes(f.q) || f.q.split(' ').filter(w => w.length > 3).filter(w => text.includes(w)).length >= 2) {\n    await sendPrReply(f.a);\n    return [{ json: { ok: true, faq_matched: true, reply: f.a } }];\n  }\n}\n\nif (/(?:indicator|script|scanner|سكانر|مؤشر|توصية)/i.test(text)) {\n  const guardMsg = `🔒 <b>${brand} PR Desk:</b>\\nVIP Indicators and Scanners are available to active members.\\nSubscribe via Whop: ${$env.WHOP_CHECKOUT_URL || 'Configure WHOP_CHECKOUT_URL'}`;\n  await sendPrReply(guardMsg);\n  return [{ json: { ok: true, guarded: true, reply: guardMsg } }];\n}\n\nlet reply = `Welcome to ${brand} Public Relations Desk! Ask about membership pricing, live sessions, or workshops.`;\nif (groqKey && text) {\n  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: `You are ${brand} PR Representative. Answer strictly based on configured pricing and platforms (${PLATFORMS}). Never invent unverified links.` },\n        { role: 'user', content: text }\n      ]\n    })\n  }).then(res => res.json()).catch(() => ({}));\n  if (r.choices?.[0]?.message?.content) reply = r.choices[0].message.content;\n}\n\nawait sendPrReply(reply);\nreturn [{ json: { ok: true, reply } }];"
+          },
+          "id": "pr-engine",
+          "name": "17-FAQs & Prospect Guard Engine",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "PR Webhook": {
+          "main": [
+            [
+              {
+                "node": "17-FAQs & Prospect Guard Engine",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "pr",
+        "white-label"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-03-trader-agent",
+      "name": "03_Tradesejon_Trader_Support_Agent",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-trader",
+            "responseMode": "lastNode"
+          },
+          "id": "tr-wh",
+          "name": "Trader Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const body = $input.first().json.body || $input.first().json || {};\nconst text = String(body.message?.text || body.text || '').trim();\nconst chatId = String(body.message?.chat?.id || body.chat_id || '');\nconst botToken = $env.TELEGRAM_TRADER_BOT_TOKEN || '';\nconst groqKey = $env.GROQ_API_KEY || '';\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nlet reply = `🎯 **${brand} Hyper-Scalping Framework:**\\n• WIN BIG, win small, lose small.\\n• Strict Stop Loss (1-2% max risk).\\n• Live Session: ${$env.LIVE_SESSION_SCHEDULE || 'Mon–Fri 9:30 PM'}`;\nif (groqKey && text) {\n  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: `You are ${brand} Trading Mentor Assistant. Guide traders strictly on Hyper-Scalping risk management and supported platforms.` },\n        { role: 'user', content: text }\n      ]\n    })\n  }).then(res => res.json()).catch(() => ({}));\n  if (r.choices?.[0]?.message?.content) reply = r.choices[0].message.content;\n}\nif (chatId && botToken) {\n  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: chatId, text: reply, parse_mode: 'HTML' })\n  }).catch(() => null);\n}\nreturn [{ json: { ok: true, reply } }];"
+          },
+          "id": "tr-engine",
+          "name": "Hyper-Scalping & Mentor Engine",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "Trader Webhook": {
+          "main": [
+            [
+              {
+                "node": "Hyper-Scalping & Mentor Engine",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "trader"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-04-omnichannel-router",
+      "name": "04_Tradesejon_Omnichannel_CrossPlatform_Router",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-dispatch",
+            "responseMode": "lastNode"
+          },
+          "id": "rt-wh",
+          "name": "Dispatch Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst platform = String(b.platform || 'discord').toLowerCase();\nconst target = String(b.target || '');\nconst message = String(b.message || '');\nconst brand = $env.BRAND_NAME || 'Tradesejon';\nif (!target || !message) return [{ json: { ok: false, delivered: false, error: 'Missing target or message payload' } }];\n\nif (platform === 'discord') {\n  const token = $env.DISCORD_BOT_TOKEN;\n  if (!token) return [{ json: { ok: false, delivered: false, error: 'DISCORD_BOT_TOKEN not configured' } }];\n  const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {\n    method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ recipient_id: target })\n  });\n  const dmData = await dmRes.json();\n  if (!dmRes.ok || !dmData.id) return [{ json: { ok: false, delivered: false, error: 'Discord DM open failed', details: dmData } }];\n  const msgRes = await fetch(`https://discord.com/api/v10/channels/${dmData.id}/messages`, {\n    method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({ content: message })\n  });\n  const msgData = await msgRes.json();\n  if (!msgRes.ok || !msgData.id) return [{ json: { ok: false, delivered: false, error: 'Discord rejected delivery', details: msgData } }];\n  return [{ json: { ok: true, delivered: true, platform: 'discord', messageId: msgData.id } }];\n}\n\nif (platform === 'telegram') {\n  const token = $env.TELEGRAM_CEO_BOT_TOKEN;\n  if (!token) return [{ json: { ok: false, delivered: false, error: 'TELEGRAM_CEO_BOT_TOKEN not configured' } }];\n  const tgRes = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: target, text: message, parse_mode: 'HTML' })\n  });\n  const tgData = await tgRes.json();\n  if (!tgData.ok) return [{ json: { ok: false, delivered: false, error: 'Telegram rejected delivery', details: tgData } }];\n  return [{ json: { ok: true, delivered: true, platform: 'telegram', messageId: tgData.result.message_id } }];\n}\n\nif (platform === 'email') {\n  const resendKey = $env.RESEND_API_KEY;\n  if (!resendKey) return [{ json: { ok: false, delivered: false, error: 'RESEND_API_KEY not configured' } }];\n  const emRes = await fetch('https://api.resend.com/emails', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      from: $env.RESEND_FROM_EMAIL || 'vip@yourdomain.com',\n      to: [target],\n      subject: String(b.subject || `${brand} Executive Update`),\n      html: `<p>${message.replace(/\\n/g, '<br>')}</p>`\n    })\n  });\n  const emData = await emRes.json();\n  if (!emRes.ok || !emData.id) return [{ json: { ok: false, delivered: false, error: 'Email API rejected delivery', details: emData } }];\n  return [{ json: { ok: true, delivered: true, platform: 'email', messageId: emData.id } }];\n}\n\nreturn [{ json: { ok: false, delivered: false, error: `Unsupported platform: ${platform}` } }];"
+          },
+          "id": "rt-exec",
+          "name": "Verified Multi-Channel Dispatcher",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "Dispatch Webhook": {
+          "main": [
+            [
+              {
+                "node": "Verified Multi-Channel Dispatcher",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "omnichannel",
+        "verified-delivery"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-05",
+      "name": "05_Tradesejon_Lead_Intake_Validation_And_Whop_OTP_Gate",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-01",
+          "name": "Intake Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-lead-intake",
+            "responseMode": "responseNode",
+            "options": {}
+          }
+        },
+        {
+          "id": "auth-01",
+          "name": "Zero-Trust Header Auth",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            340,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+          }
+        },
+        {
+          "id": "val-01",
+          "name": "Strict Mail & Phone Validation",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            560,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\n\nconst INVALID_DOMAINS = new Set([\n  'gmai.com','gmial.com','gamil.com','gmail.con','gmail.cmo','gmail.comm','gmail.co','gmail.cm','gmail.om',\n  'yaho.com','yahooo.com','yahoo.con','yahoo.comm','hotmial.com','hotmail.con','hotmail.comm',\n  'outlok.com','outlook.con','outlook.comm','icloud.con','icloud.comm'\n]);\nconst INVALID_TLDS = new Set(['comm','con','cmo','cor','vom','xom','cm','om']);\nconst EMAIL_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._%+-]{0,62}[A-Za-z0-9])?@[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9](?:\\.[A-Za-z0-9][A-Za-z0-9-]{0,61}[A-Za-z0-9])*\\.[A-Za-z]{2,63}$/;\n\nfunction forceFormatEmail(raw) {\n  const cleaned = String(raw || '').replace(/^[\\s\\u200b-\\u200f\\u202a-\\u202e\\ufeff]+|[\\s\\u200b-\\u200f\\u202a-\\u202e\\ufeff]+$/g, '').toLowerCase();\n  if (!cleaned || (cleaned.match(/@/g) || []).length !== 1 || cleaned.includes('..') || /\\s/.test(cleaned) || !EMAIL_RE.test(cleaned)) return '';\n  const domain = cleaned.split('@')[1];\n  const tld = domain.split('.').pop();\n  if (INVALID_DOMAINS.has(domain) || INVALID_TLDS.has(tld)) return '';\n  return cleaned;\n}\n\nconst email = forceFormatEmail(b.email || '');\nconst phoneRaw = String(b.phone || '').replace(/[\\s\\-()]/g, '');\nconst phoneOk = /^(?:\\+?20|0)?1[0125]\\d{8}$/.test(phoneRaw) || /^\\+?[1-9]\\d{7,14}$/.test(phoneRaw);\nconst dummy = new Set(['12345678','123456789','1234567890','0123456789','987654321']);\nconst digits = phoneRaw.replace(/\\D/g, '');\nconst plausiblePhone = phoneOk && digits.length >= 8 && new Set(digits.slice(-8).split('')).size > 1 && !dummy.has(digits);\n\nif (!email || !plausiblePhone) {\n  return [{ json: { ok: false, valid: false, httpStatus: 400, error: !email ? 'invalid_email' : 'invalid_phone' } }];\n}\nconst phoneE164 = digits.startsWith('01') ? '+20' + digits.slice(1) : (digits.startsWith('1') && digits.length === 10 ? '+20' + digits : '+' + digits);\nconst level = ['entry', 'intermediate', 'advanced'].includes(String(b.trading_level || '').toLowerCase()) ? String(b.trading_level).toLowerCase() : 'entry';\nconst country = String(b.country || 'مصر').trim();\n\nreturn [{\n  json: {\n    ok: true,\n    valid: true,\n    discord_user_id: String(b.discord_user_id || ''),\n    discord_username: String(b.discord_username || ''),\n    full_name: String(b.full_name || email.split('@')[0]),\n    email,\n    phone_e164: phoneE164,\n    country,\n    trading_level: level,\n    watched_videos: Boolean(b.watched_videos),\n    free_otp_url: 'https://whop.com/checkout/plan_TEMPLATE_01',\n    updated_at: new Date().toISOString()\n  }\n}];"
+          }
+        },
+        {
+          "id": "db-01",
+          "name": "Upsert MongoDB Atlas CRM",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            780,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const d = $input.first().json;\nif (!d.valid) return [{ json: d }];\nconst { MongoClient } = require('mongodb');\nconst uri = $env.MONGODB_URI;\nif (!uri) throw new Error('MONGODB_URI is not set');\nconst client = new MongoClient(uri);\nawait client.connect();\ntry {\n  const db = client.db($env.MONGODB_DB || 'automation_hub');\n  const doc = {\n    discord_user_id: d.discord_user_id,\n    discord_username: d.discord_username,\n    full_name: d.full_name,\n    email: d.email,\n    phone: d.phone_e164,\n    phoneE164: d.phone_e164,\n    country: d.country,\n    trading_level: d.trading_level,\n    watched_videos: d.watched_videos,\n    status: 'pending_whop_otp',\n    whop_otp_verified: false,\n    paid: false,\n    updated_at: new Date()\n  };\n  await db.collection('trading_leads').updateOne({ email: d.email }, { $set: doc, $setOnInsert: { created_at: new Date() } }, { upsert: true });\n  await db.collection('leads').updateOne({ email: d.email }, { $set: doc, $setOnInsert: { created_at: new Date() } }, { upsert: true });\n  await db.collection('client_files').updateOne({ discord_user_id: d.discord_user_id || d.email }, { $set: doc, $setOnInsert: { created_at: new Date() } }, { upsert: true });\n} finally {\n  await client.close();\n}\nreturn [{ json: d }];"
+          }
+        },
+        {
+          "id": "resp-01",
+          "name": "Respond Validated",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            1000,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Intake Webhook": {
+          "main": [
+            [
+              {
+                "node": "Zero-Trust Header Auth",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Zero-Trust Header Auth": {
+          "main": [
+            [
+              {
+                "node": "Strict Mail & Phone Validation",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Strict Mail & Phone Validation": {
+          "main": [
+            [
+              {
+                "node": "Upsert MongoDB Atlas CRM",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Upsert MongoDB Atlas CRM": {
+          "main": [
+            [
+              {
+                "node": "Respond Validated",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-06",
+      "name": "06_Tradesejon_Whop_Webhook_ZeroTrust_Fulfillment_And_Revoke",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-02",
+          "name": "Whop Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-whop-fulfillment",
+            "responseMode": "responseNode",
+            "options": {
+              "rawBody": true
+            }
+          }
+        },
+        {
+          "id": "sig-02",
+          "name": "Verify HMAC-SHA256 + Classify Tier",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            380,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const crypto = require('crypto');\nconst item = $input.first().json;\nconst headers = item.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst wid = String(lower['webhook-id'] || '');\nconst ts = String(lower['webhook-timestamp'] || '');\nconst sig = String(lower['webhook-signature'] || '');\nconst secret = String($env.WHOP_WEBHOOK_SECRET || '');\nif (!secret || !wid || !ts || !sig) {\n  return [{ json: { ok: false, httpStatus: 401, error: 'missing_signature_or_secret' } }];\n}\nconst skew = Math.abs(Math.floor(Date.now() / 1000) - Number(ts));\nif (!Number.isFinite(skew) || skew > 300) {\n  return [{ json: { ok: false, httpStatus: 401, error: 'stale_timestamp' } }];\n}\nconst rawBody = typeof item.rawBody === 'string' ? item.rawBody : JSON.stringify(item.body || item);\nconst keyBytes = secret.startsWith('ws_') ? Buffer.from(secret.slice(3), 'base64') : Buffer.from(secret, 'utf8');\nconst expectedSig = crypto.createHmac('sha256', keyBytes).update(`${wid}.${ts}.${rawBody}`).digest('base64');\nconst validSig = sig.split(/\\s+/).some((part) => {\n  const [, val] = part.split(',');\n  return val && val.length === expectedSig.length && crypto.timingSafeEqual(Buffer.from(val), Buffer.from(expectedSig));\n});\nif (!validSig) {\n  return [{ json: { ok: false, httpStatus: 401, error: 'bad_signature' } }];\n}\n\nconst payload = item.body || item;\nconst ev = String(payload.action || payload.event || '').toLowerCase();\nconst data = payload.data || payload;\nconst meta = data.metadata || {};\nconst planId = String(data.variant_id || data.plan_id || (data.plan && data.plan.id) || meta.plan_id || '');\nconst email = String(data.customer_email || data.email || meta.email || '').trim().toLowerCase();\nconst discordUserId = String(meta.discord_user_id || data.discord_user_id || '');\nconst amount = Number((data.total && data.total.amount) || data.amount || 0);\nconst isFreeOtp = planId === 'plan_TEMPLATE_01' && amount <= 0;\n\nreturn [{\n  json: {\n    ok: true,\n    httpStatus: 200,\n    event: ev,\n    planId,\n    email,\n    discordUserId,\n    amount,\n    isFreeOtp,\n    isPaid: !isFreeOtp && ev === 'payment.succeeded',\n    isRevoke: ev === 'refund.created' || ev === 'membership.deactivated',\n    invitePayload: { max_age: 900, max_uses: 1, temporary: false, unique: true }\n  }\n}];"
+          }
+        },
+        {
+          "id": "resp-02",
+          "name": "Respond Verified",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            660,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Whop Webhook": {
+          "main": [
+            [
+              {
+                "node": "Verify HMAC-SHA256 + Classify Tier",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Verify HMAC-SHA256 + Classify Tier": {
+          "main": [
+            [
+              {
+                "node": "Respond Verified",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-07",
+      "name": "07_Tradesejon_Agentic_Trader_Support_17FAQ_And_Prospect_Guard",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-03",
+          "name": "Trader Agent Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-trader-agent",
+            "responseMode": "responseNode",
+            "options": {}
+          }
+        },
+        {
+          "id": "auth-03",
+          "name": "Zero-Trust Header Auth",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            340,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+          }
+        },
+        {
+          "id": "if-03",
+          "name": "If Authorized",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 2,
+          "position": [
+            560,
+            260
+          ],
+          "parameters": {
+            "conditions": {
+              "options": {
+                "caseSensitive": true,
+                "leftValue": "",
+                "typeValidation": "strict",
+                "version": 2
+              },
+              "conditions": [
+                {
+                  "id": "if-03-cond",
+                  "leftValue": "={{ $json.authorized }}",
+                  "rightValue": true,
+                  "operator": {
+                    "type": "boolean",
+                    "operation": "true",
+                    "singleValue": true
+                  }
+                }
+              ],
+              "combinator": "and"
+            },
+            "options": {}
+          }
+        },
+        {
+          "id": "guard-03",
+          "name": "Prospect Valuable File Guard",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            780,
+            180
+          ],
+          "parameters": {
+            "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\nconst q = String(b.question || '').trim();\nconst isPaid = Boolean(b.paid);\nconst blockedKw = ['blueprint','masterclass','business model canvas','marketing plan','visual identity','1omga0wt','1c7gz7rw','المخطط الاستراتيجي','دليل الماستركلاس','خطة التسويق','الهوية البصرية','مجلد المستندات'];\nif (!isPaid && blockedKw.some((k) => q.toLowerCase().includes(k))) {\n  return [{ json: { ok: true, blocked: true, reply: '🔒 الملفات والمستندات الخاصة والمدفوعة متاحة فقط للمشتركين بعد تأكيد الاشتراك والدفع عبر Whop.' } }];\n}\nreturn [{ json: { ok: true, blocked: false, question: q, user_id: String(b.discord_user_id || ''), isPaid } }];"
+          }
+        },
+        {
+          "id": "resp-03",
+          "name": "Respond Safe Reply",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            1020,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Trader Agent Webhook": {
+          "main": [
+            [
+              {
+                "node": "Zero-Trust Header Auth",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Zero-Trust Header Auth": {
+          "main": [
+            [
+              {
+                "node": "If Authorized",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "If Authorized": {
+          "main": [
+            [
+              {
+                "node": "Prospect Valuable File Guard",
+                "type": "main",
+                "index": 0
+              }
+            ],
+            [
+              {
+                "node": "Respond Safe Reply",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Prospect Valuable File Guard": {
+          "main": [
+            [
+              {
+                "node": "Respond Safe Reply",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-08",
+      "name": "08_Tradesejon_CEO_Admin_Command_Center_And_Targeted_DM",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-04",
+          "name": "CEO Command Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-ceo-command",
+            "responseMode": "responseNode",
+            "options": {}
+          }
+        },
+        {
+          "id": "auth-04",
+          "name": "CEO Strict Auth",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+          }
+        },
+        {
+          "id": "dm-exec-08",
+          "name": "Execute Verified Discord DM",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            490,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\nconst targetId = String(b.discord_user_id || '');\nconst msg = String(b.message || '');\nconst token = $env.DISCORD_BOT_TOKEN || '';\nif (!targetId || !msg || !token) return [{ json: { ok: false, httpStatus: 400, error: 'Missing discord_user_id, message, or DISCORD_BOT_TOKEN' } }];\nconst ch = await fetch('https://discord.com/api/v10/users/@me/channels', {\n  method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ recipient_id: targetId })\n}).then(r => r.json());\nif (!ch.id) return [{ json: { ok: false, delivered: false, httpStatus: 502, error: 'Failed to open Discord DM channel' } }];\nconst sent = await fetch(`https://discord.com/api/v10/channels/${ch.id}/messages`, {\n  method: 'POST', headers: { 'Authorization': `Bot ${token}`, 'Content-Type': 'application/json' },\n  body: JSON.stringify({ content: msg })\n}).then(r => r.json());\nreturn [{ json: { ok: Boolean(sent.id), delivered: Boolean(sent.id), messageId: sent.id || null } }];"
+          }
+        },
+        {
+          "id": "resp-04",
+          "name": "Respond CEO",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            620,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "CEO Command Webhook": {
+          "main": [
+            [
+              {
+                "node": "CEO Strict Auth",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "CEO Strict Auth": {
+          "main": [
+            [
+              {
+                "node": "Execute Verified Discord DM",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Execute Verified Discord DM": {
+          "main": [
+            [
+              {
+                "node": "Respond CEO",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-09",
+      "name": "09_Tradesejon_Offline_Workshop_Launch_Form_And_Seats",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-05",
+          "name": "Offline Workshop Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-offline-workshop",
+            "responseMode": "responseNode",
+            "options": {}
+          }
+        },
+        {
+          "id": "auth-05",
+          "name": "Operator Auth Guard",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+          }
+        },
+        {
+          "id": "ws-exec-09",
+          "name": "Reserve Seat in MongoDB",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            490,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const item = $input.first().json;\nif (!item.authorized) return [{ json: item }];\nconst b = item.body || {};\nif (!$env.MONGODB_URI) return [{ json: { ok: false, error: 'MONGODB_URI required for workshop seat reservation' } }];\nconst { MongoClient } = require('mongodb');\nconst client = new MongoClient($env.MONGODB_URI);\nawait client.connect();\nconst db = client.db($env.MONGODB_DB || 'tradesejon_prod');\nconst maxSeats = Number($env.WORKSHOP_MAX_SEATS || 20);\nconst count = await db.collection('workshop_seats').countDocuments({ status: 'confirmed' });\nif (count >= maxSeats) {\n  await client.close();\n  return [{ json: { ok: false, seats_remaining: 0, error: `Workshop reached capacity (${maxSeats} seats)` } }];\n}\nawait db.collection('workshop_seats').insertOne({\n  full_name: String(b.full_name || 'Applicant'),\n  email: String(b.email || '').toLowerCase(),\n  phone: String(b.phone || ''),\n  is_member: Boolean(b.is_member),\n  status: 'confirmed',\n  createdAt: new Date()\n});\nawait client.close();\nreturn [{ json: { ok: true, reserved: true, seats_remaining: maxSeats - count - 1 } }];"
+          }
+        },
+        {
+          "id": "resp-05",
+          "name": "Respond Workshop",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            620,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Offline Workshop Webhook": {
+          "main": [
+            [
+              {
+                "node": "Operator Auth Guard",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Operator Auth Guard": {
+          "main": [
+            [
+              {
+                "node": "Reserve Seat in MongoDB",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Reserve Seat in MongoDB": {
+          "main": [
+            [
+              {
+                "node": "Respond Workshop",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-10",
+      "name": "10_Tradesejon_Google_Sheets_Master_Auto_Sync_Forever",
+      "active": true,
+      "nodes": [
+        {
+          "id": "cron-06",
+          "name": "Every 5 Minutes Sync",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "minutes",
+                  "minutesInterval": 5
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "pull-06",
+          "name": "Pull MongoDB Atlas CRM Rows",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            380,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const { MongoClient } = require('mongodb');\nconst uri = $env.MONGODB_URI;\nif (!uri) throw new Error('MONGODB_URI is not set');\nconst client = new MongoClient(uri);\nawait client.connect();\nconst rows = [];\ntry {\n  const db = client.db($env.MONGODB_DB || 'automation_hub');\n  const docs = await db.collection('trading_leads').find({}).sort({ updated_at: -1 }).limit(500).toArray();\n  for (const d of docs) {\n    rows.push({\n      updated_at: d.updated_at ? new Date(d.updated_at).toISOString() : '',\n      discord_user_id: String(d.discord_user_id || ''),\n      discord_username: String(d.discord_username || ''),\n      full_name: String(d.full_name || ''),\n      email: String(d.email || ''),\n      phone: String(d.phone_e164 || d.phone || ''),\n      tier: String(d.tier || ''),\n      status: String(d.status || ''),\n      in_community: String(Boolean(d.in_community)),\n      plan_id: String(d.plan_id || ''),\n      amount_usd: Number(d.amount_usd || 0),\n      roles: Array.isArray(d.roles) ? d.roles.join(',') : '',\n      whop_payment_id: String(d.whop_payment_id || ''),\n      source: String(d.source || 'vps_n8n'),\n      live_link: String(d.discord_live_url || d.unique_zoom_url || ''),\n      notes: String(d.country || '') + ' | ' + String(d.trading_level || '')\n    });\n  }\n} finally {\n  await client.close();\n}\nreturn [{ json: { ok: true, gsheet_id: 'YOUR_GOOGLE_ID', row_count: rows.length, rows } }];"
+          }
+        }
+      ],
+      "connections": {
+        "Every 5 Minutes Sync": {
+          "main": [
+            [
+              {
+                "node": "Pull MongoDB Atlas CRM Rows",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-11",
+      "name": "11_Tradesejon_Self_Healing_Error_Watcher_And_Audit",
+      "active": true,
+      "nodes": [
+        {
+          "id": "err-07",
+          "name": "Workflow Error Trigger",
+          "type": "n8n-nodes-base.errorTrigger",
+          "typeVersion": 1,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {}
+        },
+        {
+          "id": "log-07",
+          "name": "Redact & Format Audit Alert",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            380,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const e = $input.first().json || {}; return [{ json: { ok: true, workflow: (e.workflow && e.workflow.name) || 'unknown', message: String((e.execution && e.execution.error && e.execution.error.message) || 'error').slice(0, 300), at: new Date().toISOString() } }];"
+          }
+        },
+        {
+          "id": "err-alert-11",
+          "name": "Log Audit & Notify CEO Telegram",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            600,
+            300
+          ],
+          "parameters": {
+            "jsCode": "const err = $input.first().json || {};\nif ($env.MONGODB_URI) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const c = new MongoClient($env.MONGODB_URI);\n    await c.connect();\n    await c.db($env.MONGODB_DB || 'tradesejon_prod').collection('audit_logs').insertOne({ ...err, severity: 'error', timestamp: new Date() });\n    await c.close();\n  } catch (e) {}\n}\nconst ceoChat = String($env.CEO_USER_IDS || '').split(',')[0].trim();\nconst botTok = $env.TELEGRAM_CEO_BOT_TOKEN || '';\nif (ceoChat && botTok) {\n  await fetch(`https://api.telegram.org/bot${botTok}/sendMessage`, {\n    method: 'POST', headers: { 'Content-Type': 'application/json' },\n    body: JSON.stringify({ chat_id: ceoChat, text: `🚨 <b>Workflow Error Alert:</b> ${err.workflow}\\n<code>${err.message}</code>`, parse_mode: 'HTML' })\n  }).catch(() => null);\n}\nreturn [{ json: { ok: true, alerted: true } }];"
+          }
+        }
+      ],
+      "connections": {
+        "Workflow Error Trigger": {
+          "main": [
+            [
+              {
+                "node": "Redact & Format Audit Alert",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Redact & Format Audit Alert": {
+          "main": [
+            [
+              {
+                "node": "Log Audit & Notify CEO Telegram",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-12",
+      "name": "12_Tradesejon_Whop_Payment_Reconciler_Cron",
+      "active": true,
+      "nodes": [
+        {
+          "id": "cron-08",
+          "name": "Every 2 Minutes Reconcile",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "minutes",
+                  "minutesInterval": 2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "http-08",
+          "name": "Fetch Recent Paid Whop Payments",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            380,
+            260
+          ],
+          "parameters": {
+            "method": "GET",
+            "url": "https://api.whop.com/api/v1/payments?status=paid&limit=20",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $env.WHOP_API_KEY }}"
+                }
+              ]
+            },
+            "options": {
+              "timeout": 10000
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Every 2 Minutes Reconcile": {
+          "main": [
+            [
+              {
+                "node": "Fetch Recent Paid Whop Payments",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-13",
+      "name": "13_Tradesejon_Daily_Live_Session_Broadcast_Cron",
+      "active": true,
+      "nodes": [
+        {
+          "id": "cron-09",
+          "name": "Daily Live Session Schedule",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "cronExpression",
+                  "expression": "0 16 * * 1-5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "inv-09",
+          "name": "Create 1-Time 15m Discord Live Invite",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            380,
+            260
+          ],
+          "parameters": {
+            "method": "POST",
+            "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_LIVE_VOICE_CHANNEL_ID }}/invites",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify({ max_age: 900, max_uses: 1, temporary: true, unique: true }) }}",
+            "options": {
+              "timeout": 10000
+            }
+          }
+        },
+        {
+          "id": "msg-09",
+          "name": "Post Live Broadcast Announcement",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            640,
+            260
+          ],
+          "parameters": {
+            "method": "POST",
+            "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_ANNOUNCEMENT_CHANNEL_ID }}/messages",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify({ content: '🔴 Live Trading Session Starting — 1-time 15-min link: https://discord.gg/' + ($json.code || '') }) }}",
+            "options": {
+              "timeout": 10000
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Daily Live Session Schedule": {
+          "main": [
+            [
+              {
+                "node": "Create 1-Time 15m Discord Live Invite",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Create 1-Time 15m Discord Live Invite": {
+          "main": [
+            [
+              {
+                "node": "Post Live Broadcast Announcement",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-14",
+      "name": "14_Tradesejon_12_Markets_Hourly_Pulse_Watcher",
+      "active": true,
+      "nodes": [
+        {
+          "id": "cron-10",
+          "name": "Hourly Market Pulse Cron",
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "typeVersion": 1.2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "rule": {
+              "interval": [
+                {
+                  "field": "hours",
+                  "hoursInterval": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "ai-10",
+          "name": "Groq Market Pulse Brief",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            380,
+            260
+          ],
+          "parameters": {
+            "method": "POST",
+            "url": "https://api.groq.com/openai/v1/chat/completions",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $env.GROQ_API_KEY }}"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'system', content: 'Summarize US Small-Cap Hyper-Scalping market pulse concisely.' }, { role: 'user', content: 'Generate hourly market pulse check.' }] }) }}",
+            "options": {
+              "timeout": 15000
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Hourly Market Pulse Cron": {
+          "main": [
+            [
+              {
+                "node": "Groq Market Pulse Brief",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-15",
+      "name": "15_Tradesejon_Lead_Approval_And_VIP_Email_Dispatcher",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-11",
+          "name": "VIP Email Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-vip-email",
+            "responseMode": "responseNode",
+            "options": {}
+          }
+        },
+        {
+          "id": "auth-11",
+          "name": "Zero-Trust Header Auth",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            340,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+          }
+        },
+        {
+          "id": "if-11",
+          "name": "If Authorized",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 2,
+          "position": [
+            560,
+            260
+          ],
+          "parameters": {
+            "conditions": {
+              "options": {
+                "caseSensitive": true,
+                "leftValue": "",
+                "typeValidation": "strict",
+                "version": 2
+              },
+              "conditions": [
+                {
+                  "id": "if-11-cond",
+                  "leftValue": "={{ $json.authorized }}",
+                  "rightValue": true,
+                  "operator": {
+                    "type": "boolean",
+                    "operation": "true",
+                    "singleValue": true
+                  }
+                }
+              ],
+              "combinator": "and"
+            },
+            "options": {}
+          }
+        },
+        {
+          "id": "send-11",
+          "name": "Send VIP Email via Resend",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            780,
+            180
+          ],
+          "parameters": {
+            "method": "POST",
+            "url": "https://api.resend.com/emails",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bearer {{ $env.RESEND_API_KEY }}"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify({ from: $env.RESEND_FROM_EMAIL || 'onboarding@resend.dev', to: [$json.email], subject: $json.subject || 'Tradesejon Access', html: $json.html || '<p>Welcome to Tradesejon.</p>' }) }}",
+            "options": {
+              "timeout": 10000
+            }
+          }
+        },
+        {
+          "id": "resp-11",
+          "name": "Respond Dispatched",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            1020,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json.authorized === false ? $json : { ok: true, id: $json.id || null }) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "VIP Email Webhook": {
+          "main": [
+            [
+              {
+                "node": "Zero-Trust Header Auth",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Zero-Trust Header Auth": {
+          "main": [
+            [
+              {
+                "node": "If Authorized",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "If Authorized": {
+          "main": [
+            [
+              {
+                "node": "Send VIP Email via Resend",
+                "type": "main",
+                "index": 0
+              }
+            ],
+            [
+              {
+                "node": "Respond Dispatched",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Send VIP Email via Resend": {
+          "main": [
+            [
+              {
+                "node": "Respond Dispatched",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-16",
+      "name": "16_Tradesejon_Zoom_And_Live_Session_Gateway",
+      "active": true,
+      "nodes": [
+        {
+          "id": "wh-13",
+          "name": "Zoom Live Gateway Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            120,
+            260
+          ],
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "vps-zoom-gateway",
+            "responseMode": "responseNode",
+            "options": {}
+          }
+        },
+        {
+          "id": "auth-13",
+          "name": "Zero-Trust Header Auth",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            340,
+            260
+          ],
+          "parameters": {
+            "jsCode": "const headers = $input.first().json.headers || {};\nconst lower = Object.fromEntries(Object.entries(headers).map(([k, v]) => [String(k).toLowerCase(), v]));\nconst token = String(lower['x-tradesejon-secret'] || lower['x-operator-token'] || lower['x-ceo-token'] || '');\nconst expected = String($env.WORKSHOP_LAUNCH_TOKEN || $env.TRADESAJON_BRIDGE_SECRET || '');\nif (!expected || token !== expected) {\n  return [{ json: { ok: false, authorized: false, httpStatus: 401, error: 'unauthorized' } }];\n}\nconst body = $input.first().json.body || $input.first().json || {};\nreturn [{ json: { ok: true, authorized: true, body } }];"
+          }
+        },
+        {
+          "id": "if-13",
+          "name": "If Authorized",
+          "type": "n8n-nodes-base.if",
+          "typeVersion": 2,
+          "position": [
+            560,
+            260
+          ],
+          "parameters": {
+            "conditions": {
+              "options": {
+                "caseSensitive": true,
+                "leftValue": "",
+                "typeValidation": "strict",
+                "version": 2
+              },
+              "conditions": [
+                {
+                  "id": "if-13-cond",
+                  "leftValue": "={{ $json.authorized }}",
+                  "rightValue": true,
+                  "operator": {
+                    "type": "boolean",
+                    "operation": "true",
+                    "singleValue": true
+                  }
+                }
+              ],
+              "combinator": "and"
+            },
+            "options": {}
+          }
+        },
+        {
+          "id": "inv-13",
+          "name": "Issue 1-Time 15m Live Invite",
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.2,
+          "position": [
+            780,
+            180
+          ],
+          "parameters": {
+            "method": "POST",
+            "url": "=https://discord.com/api/v10/channels/{{ $env.DISCORD_LIVE_VOICE_CHANNEL_ID }}/invites",
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Authorization",
+                  "value": "=Bot {{ $env.DISCORD_BOT_TOKEN }}"
+                },
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify({ max_age: 900, max_uses: 1, temporary: true, unique: true }) }}",
+            "options": {
+              "timeout": 10000
+            }
+          }
+        },
+        {
+          "id": "resp-13",
+          "name": "Respond Live Invite",
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [
+            1020,
+            260
+          ],
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ JSON.stringify($json.authorized === false ? $json : { ok: true, invite_code: $json.code || null, ttl_seconds: 900, max_uses: 1 }) }}",
+            "options": {
+              "responseCode": "={{ $json.httpStatus || 200 }}"
+            }
+          }
+        }
+      ],
+      "connections": {
+        "Zoom Live Gateway Webhook": {
+          "main": [
+            [
+              {
+                "node": "Zero-Trust Header Auth",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Zero-Trust Header Auth": {
+          "main": [
+            [
+              {
+                "node": "If Authorized",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "If Authorized": {
+          "main": [
+            [
+              {
+                "node": "Issue 1-Time 15m Live Invite",
+                "type": "main",
+                "index": 0
+              }
+            ],
+            [
+              {
+                "node": "Respond Live Invite",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        },
+        "Issue 1-Time 15m Live Invite": {
+          "main": [
+            [
+              {
+                "node": "Respond Live Invite",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "settings": {
+        "errorWorkflow": "tradesejon-wf-11"
+      }
+    },
+    {
+      "id": "tradesejon-wf-17-rag-engine",
+      "name": "17_Tradesejon_RAG_Knowledge_Base_Indexer_And_Retriever",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-rag-query",
+            "responseMode": "lastNode"
+          },
+          "id": "rag-wh",
+          "name": "RAG Query Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst query = String(b.query || '').toLowerCase();\nconst BRAND = $env.BRAND_NAME || \"Tradesejon\";\nconst MENTORS = $env.MENTORS_LIST || \"Senior Lead Strategist, Mentor Alpha, Mentor Beta, Mentor Gamma, Mentor Delta\";\nconst PLATFORMS = $env.SUPPORTED_PLATFORMS || \"Webull, Interactive Brokers (IBKR), TradingView\";\nconst FAQS = [\n  { q: \"مبتدئ في التداول / الفيديوهات\", a: `في ${BRAND} بنبدأ معاك من الصفر بخطة تدريبية منظمة وتطبيق عملي لايف عشان تتقن استراتيجية الـ Hyper-Scalping خطوة بخطوة.` },\n  { q: \"ايه المتطلبات عشان ابدأ؟\", a: \"لابتوب أو كمبيوتر، إنترنت مستقر، والتفرغ لحضور الجلسات اللايف المباشرة.\" },\n  { q: \"رأس المال المطلوب للبدء؟\", a: \"تقدر تبدأ بمرونة من $100 إلى $500 مع إدارة صارمة لرأس المال (WIN BIG, win small, lose small).\" },\n  { q: \"منصات وبرامج التداول المعتمدة؟\", a: `ندعم رسمياً منصات: ${PLATFORMS}.` },\n  { q: \"أوقات الجلسات اليومية المباشرة؟\", a: $env.LIVE_SESSION_SCHEDULE || \"يومياً من الإثنين للجمعة الساعة 9:30 مساءً عبر Discord VIP و Zoom.\" },\n  { q: \"أسعار ورشة التداول الأوفلاين؟\", a: `${$env.WORKSHOP_MEMBER_PRICE || '4,000'} جنيه ($74.39) للأعضاء، و ${$env.WORKSHOP_NONMEMBER_PRICE || '6,000'} جنيه ($111.59) لغير المشتركين.` },\n  { q: \"اشتراك مجتمع وسكانر الديسكورد؟\", a: `$${$env.VIP_MONTHLY_USD || '45'} شهرياً عبر Whop شاملة قنوات الـ VIP وسكانر الصفقات اللحظي.` },\n  { q: \"جلسة المتابعة الخاصة 4 ساعات؟\", a: `جلسة Online 1-on-1 لمدة 4 ساعات بقيمة $${$env.PRIVATE_SESSION_USD || '100'} شاملة مراجعة المحفظة والتطبيق المباشر.` },\n  { q: \"من هم الموجهين والمدربين؟\", a: `فريق التوجيه المعتمد في ${BRAND}: ${MENTORS}.` },\n  { q: \"طريقة وأسلوب التداول؟\", a: \"استراتيجية الـ Hyper-Scalping بمبدأ WIN BIG, win small, lose small.\" },\n  { q: \"هل يوجد توصيات شراء وبيع مباشرة؟\", a: \"بنوفرلك تحليلات لايف ومناطق دخول احترافية وسكانر لحظي مع تدريبك على القرار المستقل.\" },\n  { q: \"كيفية تجديد الاشتراك أو الترقية؟\", a: \"عبر بوابة الدفع الرسمية Whop بشكل تلقائي بالكامل وبمرونة الإلغاء بأي وقت.\" },\n  { q: \"هل الديسكورد متصل بالتيليجرام؟\", a: `نعم، منظومة ${BRAND} Omnichannel تربط الديسكورد والتيليجرام بشكل لحظي متزامن.` },\n  { q: \"ماذا أفعل لو واجهت مشكلة في الدفع؟\", a: \"تواصل مع بوت الدعم الفني أو افتح تذكرة في روم #pr-desk في الديسكورد.\" },\n  { q: \"هل متوفر شهادة بعد الورشة؟\", a: `نعم، يحصل الخريج على شهادة إتمام البرنامج التدريبي المعتمد من ${BRAND}.` },\n  { q: \"هل التداول مناسب للموظفين؟\", a: \"نعم، جلساتنا المسائية الساعة 9:30 مساءً بتوقيت القاهرة تناسب جدول العمل اليومي.\" },\n  { q: \"كيف أحصل على رابط الجلسة المباشرة؟\", a: \"يرسل الرابط المشفر تلقائياً عبر البوت قبل بدء الجلسة بـ 15 دقيقة.\" }\n];\nconst scored = FAQS.map(item => {\n  const tokens = item.q.toLowerCase().split(/\\s+/);\n  let score = 0;\n  for (const t of tokens) if (t.length > 2 && query.includes(t)) score += 1;\n  return { ...item, score };\n}).filter(x => x.score > 0).sort((a, b) => b.score - a.score);\n\nreturn [{ json: { ok: true, brand: BRAND, rag_hits: scored.length, top_context: scored.slice(0, 3) } }];"
+          },
+          "id": "rag-search",
+          "name": "Semantic & Keyword RAG Retriever",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "RAG Query Webhook": {
+          "main": [
+            [
+              {
+                "node": "Semantic & Keyword RAG Retriever",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "rag"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-18-crm-pipeline",
+      "name": "18_Tradesejon_CRM_Full_Pipeline_And_Lead_Scoring",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-crm",
+            "responseMode": "lastNode"
+          },
+          "id": "crm-wh",
+          "name": "CRM API Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst action = String(b.action || 'get_stats');\nif ($env.MONGODB_URI && (action === 'get_stats' || action === 'list_leads')) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const client = new MongoClient($env.MONGODB_URI);\n    await client.connect();\n    const db = client.db($env.MONGODB_DB || 'tradesejon_prod');\n    if (action === 'list_leads') {\n      const leads = await db.collection('leads').find({}).sort({ createdAt: -1 }).limit(50).toArray();\n      await client.close();\n      return [{ json: { ok: true, count: leads.length, leads } }];\n    }\n    const totalLeads = await db.collection('leads').countDocuments();\n    const activeMembers = await db.collection('members').countDocuments({ active: true });\n    await client.close();\n    return [{ json: { ok: true, total_leads: totalLeads, active_members: activeMembers } }];\n  } catch (e) {\n    return [{ json: { ok: false, error: 'Database query failed: ' + e.message } }];\n  }\n}\nconst capital = Number(b.capital || 0);\nconst score = Math.min(40 + (capital >= 1000 ? 35 : (capital >= 250 ? 20 : 0)) + (['advanced','intermediate'].includes(String(b.trading_level).toLowerCase()) ? 25 : 0), 100);\nreturn [{ json: { ok: true, action, lead_score: score, tier: score >= 75 ? 'VIP_HOT_LEAD' : 'QUALIFIED_PROSPECT' } }];"
+          },
+          "id": "crm-logic",
+          "name": "MongoDB CRM Engine & Lead Scoring",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "CRM API Webhook": {
+          "main": [
+            [
+              {
+                "node": "MongoDB CRM Engine & Lead Scoring",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "crm"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-19-aios-voice",
+      "name": "19_Tradesejon_AIOS_Web_Chat_And_ElevenLabs_Voice",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-aios-chat",
+            "responseMode": "lastNode"
+          },
+          "id": "aios-wh",
+          "name": "AIOS Web Chat Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst msg = String(b.message || b.query || '').trim();\nconst groqKey = $env.GROQ_API_KEY || '';\nconst elevenKey = $env.ELEVENLABS_API_KEY || '';\nconst voiceId = $env.ELEVENLABS_VOICE_ID || 'pFZP5JQG7iQjIQuC4Bku';\nconst brand = $env.BRAND_NAME || 'Tradesejon';\n\nlet reply = `${brand} AIOS processed: \"${msg}\"`;\nif (groqKey && msg) {\n  const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {\n    method: 'POST', headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },\n    body: JSON.stringify({\n      model: 'llama-3.3-70b-versatile',\n      messages: [\n        { role: 'system', content: `You are ${brand} AIOS Command Center Assistant. Answer helpfully and concisely without fabricating actions or data.` },\n        { role: 'user', content: msg }\n      ]\n    })\n  }).then(res => res.json()).catch(() => ({}));\n  if (r.choices?.[0]?.message?.content) reply = r.choices[0].message.content;\n}\n\nlet audioBase64 = null;\nif ((b.voice || b.returnVoice) && elevenKey) {\n  try {\n    const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {\n      method: 'POST', headers: { 'xi-api-key': elevenKey, 'Content-Type': 'application/json' },\n      body: JSON.stringify({ text: reply.slice(0, 400), model_id: 'eleven_multilingual_v2' })\n    });\n    if (ttsRes.ok) audioBase64 = Buffer.from(await ttsRes.arrayBuffer()).toString('base64');\n  } catch (e) {}\n}\n\nreturn [{ json: { ok: true, reply, voice_enabled: Boolean(audioBase64), audioBase64 } }];"
+          },
+          "id": "aios-proc",
+          "name": "AIOS Chat & ElevenLabs Voice",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            360,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "AIOS Web Chat Webhook": {
+          "main": [
+            [
+              {
+                "node": "AIOS Chat & ElevenLabs Voice",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "aios",
+        "voice"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-20-oneclick-provisioner",
+      "name": "20_Tradesejon_OneClick_Telegram_And_Discord_Provisioner",
+      "nodes": [
+        {
+          "parameters": {},
+          "id": "prov-manual",
+          "name": "Click Execute to Provision All Systems",
+          "type": "n8n-nodes-base.manualTrigger",
+          "typeVersion": 1,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const baseUrl = String($env.WEBHOOK_URL || '').replace(/\\/$/, '');\nconst summary = { telegram: [], discord: null, mongodb: null, white_label_brand: $env.BRAND_NAME || 'Tradesejon' };\n\nfor (const [label, tok, path] of [\n  ['CEO_BOT', $env.TELEGRAM_CEO_BOT_TOKEN, 'tradesejon-ceo'],\n  ['PR_BOT', $env.TELEGRAM_PR_BOT_TOKEN, 'tradesejon-pr'],\n  ['TRADER_BOT', $env.TELEGRAM_TRADER_BOT_TOKEN, 'tradesejon-trader']\n]) {\n  if (!tok || !baseUrl) { summary.telegram.push({ bot: label, ok: false, error: 'Missing token or WEBHOOK_URL' }); continue; }\n  try {\n    const res = await fetch(`https://api.telegram.org/bot${tok}/setWebhook?url=${encodeURIComponent(baseUrl + '/webhook/' + path)}`).then(r => r.json());\n    summary.telegram.push({ bot: label, ok: res.ok, description: res.description });\n  } catch (e) { summary.telegram.push({ bot: label, ok: false, error: e.message }); }\n}\n\nif ($env.DISCORD_BOT_TOKEN) {\n  try {\n    const dc = await fetch('https://discord.com/api/v10/users/@me', { headers: { 'Authorization': `Bot ${$env.DISCORD_BOT_TOKEN}` } }).then(r => r.json());\n    summary.discord = { ok: Boolean(dc.id), bot_username: dc.username || null };\n  } catch (e) { summary.discord = { ok: false, error: e.message }; }\n}\n\nif ($env.MONGODB_URI) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const c = new MongoClient($env.MONGODB_URI);\n    await c.connect();\n    const db = c.db($env.MONGODB_DB || 'tradesejon_prod');\n    await db.collection('leads').createIndex({ email: 1 }, { unique: true, sparse: true });\n    await db.collection('members').createIndex({ discord_user_id: 1 }, { unique: true, sparse: true });\n    await db.collection('audit_logs').createIndex({ timestamp: -1 });\n    await c.close();\n    summary.mongodb = { ok: true, indexes_created: true };\n  } catch (e) { summary.mongodb = { ok: false, error: e.message }; }\n}\n\nreturn [{ json: { ok: true, provisioning: summary, timestamp: new Date().toISOString() } }];"
+          },
+          "id": "prov-exec",
+          "name": "Auto-Bind Telegram, Discord & MongoDB",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            380,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "Click Execute to Provision All Systems": {
+          "main": [
+            [
+              {
+                "node": "Auto-Bind Telegram, Discord & MongoDB",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "setup",
+        "one-click"
+      ]
+    },
+    {
+      "id": "tradesejon-wf-21-discord-funnel-sync",
+      "name": "21_Tradesejon_Discord_Events_And_Funnel_Sync",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tradesejon-funnel-sync",
+            "responseMode": "lastNode"
+          },
+          "id": "dc-sync-wh",
+          "name": "Discord Funnel Sync Webhook",
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 2,
+          "position": [
+            100,
+            300
+          ]
+        },
+        {
+          "parameters": {
+            "jsCode": "const b = $input.first().json.body || $input.first().json || {};\nconst event = String(b.event || 'discord_funnel_sync');\nconst email = String(b.email || '').toLowerCase();\nconst uid = String(b.discord_user_id || '');\nconst tier = String(b.tier || b.status || 'prospect');\nif ($env.MONGODB_URI && (email || uid)) {\n  try {\n    const { MongoClient } = require('mongodb');\n    const c = new MongoClient($env.MONGODB_URI);\n    await c.connect();\n    const db = c.db($env.MONGODB_DB || 'tradesejon_prod');\n    await db.collection('leads').updateOne(\n      email ? { email } : { discord_user_id: uid },\n      { $set: { discord_user_id: uid, tier, last_event: event, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },\n      { upsert: true }\n    );\n    await c.close();\n  } catch (e) {}\n}\nreturn [{ json: { ok: true, synced: true, event, discord_user_id: uid, tier, timestamp: new Date().toISOString() } }];"
+          },
+          "id": "dc-sync-proc",
+          "name": "Sync Discord Event to Cloud CRM",
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 2,
+          "position": [
+            380,
+            300
+          ]
+        }
+      ],
+      "connections": {
+        "Discord Funnel Sync Webhook": {
+          "main": [
+            [
+              {
+                "node": "Sync Discord Event to Cloud CRM",
+                "type": "main",
+                "index": 0
+              }
+            ]
+          ]
+        }
+      },
+      "active": true,
+      "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner",
+        "errorWorkflow": "tradesejon-wf-11"
+      },
+      "tags": [
+        "tradesejon",
+        "discord",
+        "funnel-sync"
+      ]
+    }
+  ]
+}
