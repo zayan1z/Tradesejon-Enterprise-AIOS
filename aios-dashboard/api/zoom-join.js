@@ -1,16 +1,17 @@
 const crypto = require("crypto");
-const { MongoClient } = require("mongodb");
+let MongoClient = null;
+try { ({ MongoClient } = require("mongodb")); } catch {}
 
 const FALLBACK_ATLAS_URI = process.env.MONGODB_URI || process.env.MONGODB_ATLAS_URI || "";
 let cachedClient = null;
 
 async function getDb() {
-  if (!FALLBACK_ATLAS_URI) return null;
+  if (!FALLBACK_ATLAS_URI || !MongoClient) return null;
   if (!cachedClient) {
     cachedClient = new MongoClient(FALLBACK_ATLAS_URI, { serverSelectionTimeoutMS: 3000 });
     await cachedClient.connect();
   }
-  return cachedClient.db("automation_hub_dev");
+  return cachedClient.db(process.env.MONGODB_DB || "tradesejon_prod");
 }
 
 function timingSafeEq(a, b) {

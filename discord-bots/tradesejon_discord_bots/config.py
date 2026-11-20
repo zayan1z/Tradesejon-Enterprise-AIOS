@@ -7,7 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from dotenv import dotenv_values
 
-DEFAULT_ENV_PATH = Path(r"./data/workspace")
+DEFAULT_ENV_PATH = (
+    Path(__file__).resolve().parent.parent.parent / ".env"
+    if (Path(__file__).resolve().parent.parent.parent / ".env").exists()
+    else Path(r"./.env")
+)
 
 
 def _split_csv_set(raw: str) -> frozenset[str]:
@@ -134,11 +138,11 @@ def load_config(env_path: Path | None = None) -> DiscordConfig:
             val = file_vals.get(key)
         return str(val).strip() if val is not None and str(val).strip() else default
 
-    trader_token = get("DISCORD_TRADER_BOT_TOKEN")
-    pr_token = get("DISCORD_PR_BOT_TOKEN")
-    ceo_token = get("DISCORD_CEO_BOT_TOKEN")
-    bridge_secret = get("DISCORD_BRIDGE_SECRET")
-    aios_internal_token = get("AIOS_INTERNAL_TOKEN")
+    trader_token = get("DISCORD_TRADER_BOT_TOKEN") or get("DISCORD_BOT_TOKEN")
+    pr_token = get("DISCORD_PR_BOT_TOKEN") or get("DISCORD_BOT_TOKEN")
+    ceo_token = get("DISCORD_CEO_BOT_TOKEN") or get("DISCORD_BOT_TOKEN")
+    bridge_secret = get("DISCORD_BRIDGE_SECRET") or get("TRADESAJON_BRIDGE_SECRET")
+    aios_internal_token = get("AIOS_INTERNAL_TOKEN") or get("TRADESAJON_BRIDGE_SECRET")
     mongo_atlas_uri = get("MONGODB_ATLAS_URI") or get("MONGODB_URI")
     mongodb_ai_api_key = get("MONGODB_AI_API_KEY")
     pg_dsn = get("QA_POSTGRES_DSN")
@@ -148,8 +152,8 @@ def load_config(env_path: Path | None = None) -> DiscordConfig:
     elevenlabs_api_key = get("ELEVENLABS_API_KEY")
     resend_api_key = get("RESEND_API_KEY")
     gmail_app_password = get("GMAIL_APP_PASSWORD") or get("SMTP_PASSWORD")
-    telegram_trading_token = get("TELEGRAM_TRADING_TOKEN")
-    telegram_ceo_token = get("TELEGRAM_CEO_TOKEN")
+    telegram_trading_token = get("TELEGRAM_TRADING_TOKEN") or get("TELEGRAM_TRADER_BOT_TOKEN")
+    telegram_ceo_token = get("TELEGRAM_CEO_TOKEN") or get("TELEGRAM_CEO_BOT_TOKEN")
     marhaban_token = get("DISCORD_MARHABAN_BOT_TOKEN")
     prospect_token = get("DISCORD_PROSPECT_BOT_TOKEN")
     workshop_token = get("DISCORD_WORKSHOP_BOT_TOKEN")
@@ -200,7 +204,7 @@ def load_config(env_path: Path | None = None) -> DiscordConfig:
         pr_token=pr_token,
         ceo_token=ceo_token,
         guild_id=get("DISCORD_GUILD_ID", "900000000000000001"),
-        ceo_user_ids=_split_csv_set(get("DISCORD_CEO_USER_IDS")),
+        ceo_user_ids=_split_csv_set(get("DISCORD_CEO_USER_IDS") or get("CEO_USER_IDS")),
         pr_user_ids=_split_csv_set(get("DISCORD_PR_USER_IDS")),
         pr_role_ids=_split_csv_set(get("DISCORD_PR_ROLE_IDS")),
         ceo_channel_ids=_split_csv_set(get("DISCORD_CEO_CHANNEL_IDS")),
@@ -211,7 +215,7 @@ def load_config(env_path: Path | None = None) -> DiscordConfig:
         aios_internal_token=aios_internal_token,
         discord_public_key=get("DISCORD_PUBLIC_KEY"),
         aios_base_url=get("AIOS_BASE_URL", "http://127.0.0.1:8088").rstrip("/"),
-        mongo_local_uri=get("MONGODB_LOCAL_URI", "mongodb://127.0.0.1:27017/"),
+        mongo_local_uri=get("MONGODB_LOCAL_URI") or get("MONGODB_URI") or "mongodb://127.0.0.1:27017/",
         mongo_atlas_uri=mongo_atlas_uri,
         mongodb_ai_endpoint=get("MONGODB_AI_ENDPOINT", "https://ai.mongodb.com/v1").rstrip("/"),
         mongodb_ai_api_key=mongodb_ai_api_key,
@@ -233,7 +237,7 @@ def load_config(env_path: Path | None = None) -> DiscordConfig:
         discord_live_channel_id=get("DISCORD_LIVE_CHANNEL_ID", "900000000000000002"),
         telegram_trading_token=telegram_trading_token,
         telegram_ceo_token=telegram_ceo_token,
-        telegram_ceo_chat_id=get("TELEGRAM_CEO_CHAT_ID", "1000000001"),
+        telegram_ceo_chat_id=get("TELEGRAM_CEO_CHAT_ID") or get("CEO_CHAT_ID", "1000000001"),
         enable_members_intent=get("DISCORD_ENABLE_MEMBERS_INTENT", "").lower() in ("1", "true", "yes"),
         marhaban_channel_id=get("DISCORD_MARHABAN_CHANNEL_ID", "900000000000000005"),
         prospects_channel_id=get("DISCORD_PROSPECTS_CHANNEL_ID", "900000000000000006"),
@@ -267,8 +271,14 @@ def load_config(env_path: Path | None = None) -> DiscordConfig:
         Tradesejon_drive_folder_url=get("Tradesejon_DRIVE_FOLDER_URL", "https://drive.google.com/YOUR_DRIVE_RESOURCE"),
         Tradesejon_blueprint_id=get("Tradesejon_BLUEPRINT_ID", "YOUR_GOOGLE_ID"),
         Tradesejon_blueprint_url=get("Tradesejon_BLUEPRINT_URL", "https://drive.google.com/YOUR_DRIVE_RESOURCE"),
-        tradesejon_knowledge_base_dir=get("tradesejon_knowledge_base_DIR", r"./data/workspace"),
-        tradesajon_crm_csv_path=get("TRADESAJON_CRM_CSV_PATH", r"./data/workspace"),
+        tradesejon_knowledge_base_dir=get(
+            "TRADESEJON_KNOWLEDGE_BASE_DIR",
+            get("tradesejon_knowledge_base_DIR", str(Path(__file__).resolve().parent.parent.parent / "rag-knowledge-base")),
+        ),
+        tradesajon_crm_csv_path=get(
+            "TRADESAJON_CRM_CSV_PATH",
+            str(Path(__file__).resolve().parent.parent.parent / "crm-database" / "Tradesejon_CRM_Master.csv"),
+        ),
         n8n_base_url=get("N8N_BASE_URL", "http://localhost:5678").rstrip("/"),
         vps_n8n_base_url=get("VPS_N8N_BASE_URL", "https://n8n.yourdomain.com").rstrip("/"),
         vps_n8n_api_key=vps_n8n_api_key,

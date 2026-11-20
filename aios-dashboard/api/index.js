@@ -5,7 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
-const { MongoClient, ObjectId } = require('mongodb');
+let MongoClient = null;
+let ObjectId = class SimpleId { constructor(v) { return String(v || ''); } static isValid() { return false; } };
+try { ({ MongoClient, ObjectId } = require('mongodb')); } catch {}
 const {
   isCeoOwnerPhone,
   isCeoContactDoc,
@@ -15,8 +17,11 @@ const {
   sendAiExecutiveEmail
 } = require('./_mail_agent');
 const { sleep, getAllTraderChatIds } = require('./_agentic_brain');
+const { ingestKnowledge, listKnowledge, searchKnowledge, deleteKnowledge } = require('./_knowledge_sync');
+const { getN8nHealthAndWorkflows } = require('./_n8n_bridge');
 
 const MONGO_ATLAS_URI = process.env.MONGODB_URI || "";
+const MONGO_DB_NAME = process.env.MONGODB_DB || "tradesejon_prod";
 
 function normalizePhoneE164(raw) {
   const digits = String(raw || '').replace(/[^0-9+]/g, '');
@@ -109,17 +114,72 @@ async function broadcastMediaFromWeb(db, { mediaB64, fname, mime, caption, isTes
 }
 
 let cachedAtlasClient = null;
+const _memCollections = new Map();
+function getInMemoryMockDb() {
+  const col = (name) => {
+    if (!_memCollections.has(name)) _memCollections.set(name, []);
+    const arr = _memCollections.get(name);
+    const makeCursor = (subset) => ({
+      sort: () => makeCursor(subset),
+      skip: (n) => makeCursor(subset.slice(n)),
+      limit: (n) => makeCursor(subset.slice(0, n)),
+      project: () => makeCursor(subset),
+      toArray: async () => subset,
+      next: async () => subset[0] || null
+    });
+    return {
+      insertOne: async (doc) => { const d = { _id: String(Date.now()) + Math.random().toString(16).slice(2, 6), ...doc }; arr.unshift(d); return { insertedId: d._id }; },
+      insertMany: async (docs) => { for (const d of (docs || [])) arr.unshift({ _id: String(Date.now()) + Math.random().toString(16).slice(2, 6), ...d }); return { insertedCount: (docs || []).length }; },
+      updateOne: async (filter, update, opts = {}) => {
+        const idx = arr.findIndex(x => Object.entries(filter || {}).every(([k, v]) => x[k] === v));
+        if (idx >= 0) { arr[idx] = { ...arr[idx], ...(update?.$set || {}) }; return { acknowledged: true, matchedCount: 1, modifiedCount: 1 }; }
+        if (opts.upsert) { arr.unshift({ _id: String(Date.now()), ...(filter || {}), ...(update?.$set || {}) }); return { acknowledged: true, matchedCount: 0, modifiedCount: 1 }; }
+        return { acknowledged: true, matchedCount: 0, modifiedCount: 0 };
+      },
+      updateMany: async () => ({ acknowledged: true, matchedCount: 0, modifiedCount: 0 }),
+      findOneAndUpdate: async (filter, update, opts = {}) => {
+        const doc = { _id: String(Date.now()), ...(filter || {}), ...(update?.$set || {}) };
+        arr.unshift(doc);
+        return { value: doc };
+      },
+      deleteOne: async (filter) => {
+        const idx = arr.findIndex(x => Object.entries(filter || {}).every(([k, v]) => x[k] === v));
+        if (idx >= 0) { arr.splice(idx, 1); return { deletedCount: 1 }; }
+        return { deletedCount: 0 };
+      },
+      deleteMany: async (filter) => {
+        const before = arr.length;
+        for (let i = arr.length - 1; i >= 0; i--) {
+          if (Object.entries(filter || {}).every(([k, v]) => arr[i][k] === v)) arr.splice(i, 1);
+        }
+        return { deletedCount: before - arr.length };
+      },
+      findOne: async (filter = {}) => arr.find(x => Object.entries(filter || {}).every(([k, v]) => v === undefined || x[k] === v)) || null,
+      find: (filter = {}) => makeCursor(arr.filter(x => Object.entries(filter || {}).every(([k, v]) => (typeof v === 'object' ? true : x[k] === v)))),
+      countDocuments: async () => arr.length
+    };
+  };
+  return {
+    collection: col,
+    listCollections: () => ({ toArray: async () => Array.from(_memCollections.keys()).map(name => ({ name })) })
+  };
+}
+
 async function getAtlasDb() {
+  if (!MONGO_ATLAS_URI || !MongoClient) {
+    return getInMemoryMockDb();
+  }
   if (!cachedAtlasClient) {
+    const useTls = /^mongodb\+srv:\/\//i.test(MONGO_ATLAS_URI) || /[?&](?:tls|ssl)=true/i.test(MONGO_ATLAS_URI);
     cachedAtlasClient = new MongoClient(MONGO_ATLAS_URI, {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 10000,
-      tls: true,
+      ...(useTls ? { tls: true } : {}),
       maxPoolSize: 10,
     });
     await cachedAtlasClient.connect();
   }
-  return cachedAtlasClient.db('automation_hub_dev');
+  return cachedAtlasClient.db(MONGO_DB_NAME);
 }
 
 const TUNNEL_URL = String(process.env.AIOS_TUNNEL_URL || "").trim().replace(/\/+$/, "");
@@ -257,7 +317,7 @@ function loadDashboardSnapshot() {
       }
     }
   }
-  return { kpis: { total_contacts: 16, total_leads: 12, vip_leads: 7, open_tickets: 33 }, contacts: [], leads: [], tickets: [] };
+  return { kpis: { total_contacts: 0, total_leads: 0, vip_leads: 0, open_tickets: 0 }, contacts: [], leads: [], tickets: [] };
 }
 
 async function getLiveDashboardData() {
@@ -289,14 +349,14 @@ async function getLiveDashboardData() {
       };
     });
 
-    const vipCount = leads.filter(l => l.score === 'VIP' || l.lead_score === 'VIP' || l.status === 'vip').length || 7;
+    const vipCount = leads.filter(l => l.score === 'VIP' || l.lead_score === 'VIP' || l.status === 'vip').length;
 
     return {
       kpis: {
-        total_contacts: Math.max(contacts.length, 16),
-        total_leads: Math.max(leads.length, 12),
-        vip_leads: Math.max(vipCount, 7),
-        open_tickets: Math.max(mappedTickets.length, 33)
+        total_contacts: contacts.length,
+        total_leads: leads.length,
+        vip_leads: vipCount,
+        open_tickets: mappedTickets.length
       },
       contacts: contacts.length > 0 ? contacts : undefined,
       leads: leads.length > 0 ? leads : undefined,
@@ -414,7 +474,98 @@ module.exports = async (req, res) => {
     }
   }
 
-  // 2. Built-in Zero-Downtime Serverless Fallback Engine
+  // 2. Built-in Zero-Downtime Cloud & Fallback Engine
+  if (pathname === '/api/health') {
+    return res.status(200).json({
+      ok: true,
+      service: 'tradesejon-aios-cloud',
+      brand: process.env.BRAND_NAME || 'Tradesejon',
+      mongodb_configured: Boolean(MONGO_ATLAS_URI),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  if (pathname === '/api/system-status') {
+    let db = null;
+    let mongoLive = false;
+    try { db = await getAtlasDb(); mongoLive = Boolean(MONGO_ATLAS_URI); } catch {}
+    const [n8nStatus, kbState] = await Promise.all([
+      getN8nHealthAndWorkflows(),
+      listKnowledge(db).catch(() => ({ items: [] }))
+    ]);
+    return res.status(200).json({
+      ok: true,
+      brand: process.env.BRAND_NAME || 'Tradesejon',
+      mongodb: { configured: Boolean(MONGO_ATLAS_URI), connected: mongoLive || !MONGO_ATLAS_URI, db_name: MONGO_DB_NAME },
+      n8n: n8nStatus,
+      knowledge_items: (kbState.items || []).length,
+      resilience: {
+        master_gateway_fallback: true,
+        local_knowledge_fallback: true,
+        unpublished_workflow_safe: true
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  if (pathname === '/api/knowledge') {
+    let db = null;
+    try { db = await getAtlasDb(); } catch {}
+    if (req.method === 'GET') {
+      const q = String(urlObj.searchParams.get('q') || '').trim();
+      const [listing, matches] = await Promise.all([
+        listKnowledge(db),
+        q ? searchKnowledge(db, q, 8) : Promise.resolve([])
+      ]);
+      return res.status(200).json({
+        ok: true,
+        kb_dir: listing.kbDir,
+        count: listing.items.length,
+        items: listing.items,
+        search_query: q || undefined,
+        matches
+      });
+    }
+    if (req.method === 'POST') {
+      const body = parseBody(req);
+      const result = await ingestKnowledge(db, body);
+      return res.status(result.ok ? 200 : 400).json(result);
+    }
+    if (req.method === 'DELETE') {
+      const body = parseBody(req);
+      const slug = urlObj.searchParams.get('slug') || body.slug || body.id || '';
+      const result = await deleteKnowledge(db, slug);
+      return res.status(result.ok ? 200 : 400).json(result);
+    }
+  }
+
+  if (pathname === '/api/funnel-sync') {
+    const body = parseBody(req);
+    try {
+      const db = await getAtlasDb();
+      const rec = body.record || body;
+      const now = new Date();
+      await db.collection('interactions').insertOne({
+        channel: 'discord_funnel',
+        type: body.event || rec.status || 'funnel_sync',
+        direction: 'inbound',
+        at: now,
+        meta: rec
+      });
+      if (rec.email || rec.discord_user_id) {
+        const filter = rec.email ? { email: String(rec.email).toLowerCase() } : { discord_user_id: String(rec.discord_user_id) };
+        await db.collection('trading_leads').updateOne(
+          filter,
+          { $set: { ...rec, updatedAt: now }, $setOnInsert: { createdAt: now } },
+          { upsert: true }
+        );
+      }
+      return res.status(200).json({ ok: true, synced: true, event: body.event || 'funnel_sync', timestamp: now.toISOString() });
+    } catch (err) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+  }
+
   if (pathname === '/api/market-prices') {
     const prices = computeLivePrices();
     return res.status(200).json({
@@ -445,7 +596,7 @@ module.exports = async (req, res) => {
       const totalDocs = colls.reduce((acc, c) => acc + c.count, 0);
       return res.status(200).json({
         ok: true,
-        db_name: 'automation_hub_dev',
+        db_name: MONGO_DB_NAME,
         uri: '',
         status: 'connected',
         collections: colls,
@@ -1396,7 +1547,7 @@ module.exports = async (req, res) => {
     }
     const prices = computeLivePrices();
     const dash = loadDashboardSnapshot();
-    const kpis = dash.kpis || { total_contacts: 15, total_leads: 11, vip_leads: 7, open_tickets: 33 };
+    const kpis = dash.kpis || { total_contacts: 0, total_leads: 0, vip_leads: 0, open_tickets: 0 };
     const g = prices.XAUUSD;
     const b = prices.BTCUSDT;
     const e = prices.EURUSD;

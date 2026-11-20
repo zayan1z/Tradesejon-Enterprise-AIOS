@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo:7
@@ -9,6 +7,12 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+      - ./crm-database/init_mongodb.js:/docker-entrypoint-initdb.d/init_mongodb.js:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -16,6 +20,11 @@ services:
     restart: always
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   n8n:
     build:
@@ -27,12 +36,30 @@ services:
       - "5678:5678"
     env_file:
       - .env
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - NODE_FUNCTION_ALLOW_EXTERNAL=mongodb,nodemailer,axios
+      - NODE_PATH=/usr/local/lib/node_modules
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/tradesejon_prod}
+      - MONGODB_DB=${MONGODB_DB:-tradesejon_prod}
+      - KB_DIR=/home/node/rag-knowledge-base
     volumes:
       - n8n_storage:/home/node/.n8n
       - ./n8n-workflows:/home/node/tradesejon_workflows:ro
+      - ./rag-knowledge-base:/home/node/rag-knowledge-base:rw
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   aios_dashboard:
     build:
@@ -47,9 +74,23 @@ services:
     environment:
       - PORT=3000
       - N8N_BASE_URL=http://n8n:5678
+      - N8N_WEBHOOK_BASE_URL=http://n8n:5678
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/tradesejon_prod}
+      - MONGODB_DB=${MONGODB_DB:-tradesejon_prod}
+      - KB_DIR=/app/rag-knowledge-base
+    volumes:
+      - ./rag-knowledge-base:/app/rag-knowledge-base:rw
+      - ./n8n-workflows:/app/n8n-workflows:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
     depends_on:
-      - mongodb
-      - n8n
+      mongodb:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
 
   discord_tri_bot:
     build:
@@ -62,10 +103,19 @@ services:
       - N8N_BASE_URL=http://n8n:5678
       - AIOS_BASE_URL=http://aios_dashboard:3000
       - DISCORD_BRIDGE_HOST=0.0.0.0
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/tradesejon_prod}
+      - MONGODB_LOCAL_URI=${MONGODB_URI:-mongodb://mongodb:27017/tradesejon_prod}
+      - TRADESEJON_KNOWLEDGE_BASE_DIR=/app/rag-knowledge-base
+    volumes:
+      - ./rag-knowledge-base:/app/rag-knowledge-base:rw
+      - ./crm-database:/app/crm-database:rw
     depends_on:
-      - n8n
-      - mongodb
-      - aios_dashboard
+      mongodb:
+        condition: service_healthy
+      n8n:
+        condition: service_healthy
+      aios_dashboard:
+        condition: service_healthy
 
 volumes:
   mongo_data:

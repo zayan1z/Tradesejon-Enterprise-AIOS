@@ -685,7 +685,17 @@ class OmnichannelSyncEngine:
             for name, url in targets:
                 try:
                     async with session.post(url, json=payload, headers=headers) as resp:
-                        results[name] = {"ok": 200 <= resp.status < 300, "status": resp.status}
+                        ok = 200 <= resp.status < 300
+                        results[name] = {"ok": ok, "status": resp.status}
+                        # Fail-safe: if Workflow #21 is unpublished (404/503), fall back to #00 Master Unified Gateway
+                        if not ok and name == "n8n_local" and resp.status in (404, 405, 502, 503) and self.cfg.n8n_base_url:
+                            fb_url = f"{self.cfg.n8n_base_url}/webhook/tradesejon-unified"
+                            fb_payload = {"route": "tradesejon-funnel-sync", "action": "funnel_sync", **payload}
+                            try:
+                                async with session.post(fb_url, json=fb_payload, headers=headers) as fb_resp:
+                                    results["n8n_unified_fallback"] = {"ok": 200 <= fb_resp.status < 300, "status": fb_resp.status}
+                            except Exception as fb_exc:
+                                results["n8n_unified_fallback"] = {"ok": False, "error": str(fb_exc)[:120]}
                 except Exception as exc:
                     results[name] = {"ok": False, "error": str(exc)[:120]}
         return {"ok": any(v.get("ok") for v in results.values()), "targets": results}

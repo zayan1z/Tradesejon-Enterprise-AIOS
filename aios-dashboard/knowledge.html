@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knowledge &amp; Data Sync Studio | Enterprise AIOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #040710;
+  --panel: #0b1120;
+  --card: #111827;
+  --border: #1e293b;
+  --accent: #f59e0b;
+  --blue: #38bdf8;
+  --green: #10b981;
+  --red: #ef4444;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', 'Cairo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px;
+}
+.container { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.topbar {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.topbar h1 { font-size: 1.25rem; font-weight: 800; color: var(--accent); }
+.topbar p { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+.nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #1e293b;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { filter: brightness(1.12); }
+.btn-primary { background: linear-gradient(135deg, #f59e0b, #d97706); color: #0b1120; border: none; }
+.btn-blue { background: rgba(56, 189, 248, 0.16); color: #38bdf8; border-color: rgba(56, 189, 248, 0.45); }
+.btn-danger { background: rgba(239, 68, 68, 0.14); color: #f87171; border-color: rgba(239, 68, 68, 0.4); padding: 6px 10px; font-size: 0.78rem; }
+
+.status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+.stat-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; }
+.stat-val { font-size: 1.05rem; font-weight: 800; color: var(--green); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 880px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { font-size: 1.05rem; font-weight: 800; color: #f8fafc; }
+.card p.hint { font-size: 0.84rem; color: var(--muted); line-height: 1.5; }
+
+label { font-size: 0.8rem; font-weight: 700; color: #cbd5e1; display: block; margin-bottom: 4px; }
+input, select, textarea {
+  width: 100%;
+  background: #050811;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--blue); }
+
+.dropzone {
+  border: 2px dashed #334155;
+  border-radius: 14px;
+  padding: 28px 18px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.5);
+  cursor: pointer;
+  transition: 0.2s;
+}
+.dropzone.drag { border-color: var(--accent); background: rgba(245, 158, 11, 0.08); }
+.dropzone strong { color: var(--blue); }
+
+.receipt {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  display: none;
+}
+.receipt.error { background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.45); color: #fca5a5; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; background: #1e293b; color: #38bdf8; margin-right: 4px; }
+
+.kb-list { display: flex; flex-direction: column; gap: 10px; max-height: 460px; overflow-y: auto; }
+.kb-item {
+  background: #070b14;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.kb-item h4 { font-size: 0.92rem; color: var(--accent); margin-bottom: 4px; }
+.kb-item pre { font-family: inherit; white-space: pre-wrap; font-size: 0.82rem; color: #cbd5e1; max-height: 95px; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="topbar">
+    <div>
+      <h1>Knowledge &amp; Data Sync Studio</h1>
+      <p>Add any business text, rules, pricing, or files once — automatically synced across Web AIOS, n8n Workflow #17, MongoDB, Discord Tri-Bots, and Telegram Bots.</p>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="btn btn-blue">AIOS Command Center</a>
+      <a href="/db" class="btn">MongoDB CRM Explorer</a>
+      <a href="/form" class="btn">Lead Intake Form</a>
+      <button class="btn" onclick="loadAll()">Refresh Status</button>
+    </div>
+  </header>
+
+  <section class="status-grid" id="statusGrid">
+    <div class="stat-card"><div class="stat-label">AIOS Cloud Knowledge API</div><div class="stat-val" id="stAios">Checking...</div></div>
+    <div class="stat-card"><div class="stat-label">MongoDB Knowledge Store</div><div class="stat-val" id="stMongo">Checking...</div></div>
+    <div class="stat-card"><div class="stat-label">n8n VPS Workflow Engine</div><div class="stat-val" id="stN8n">Checking...</div></div>
+    <div class="stat-card"><div class="stat-label">Synced Custom Items</div><div class="stat-val" id="stCount">0</div></div>
+  </section>
+
+  <div class="grid-2">
+    <!-- Left Card: Quick Text / Rules / FAQ Paste -->
+    <div class="card">
+      <h2>1. Paste Any Text, Pricing, Rules, or FAQ</h2>
+      <p class="hint">Write or paste in English or Arabic. Immediately indexed into RAG search and AI prompts across every channel with zero restarts.</p>
+      <div>
+        <label for="txtTitle">Title / Topic Name</label>
+        <input type="text" id="txtTitle" placeholder="e.g. Updated VIP Pricing & Live Session Hours">
+      </div>
+      <div>
+        <label for="txtCategory">Category</label>
+        <select id="txtCategory">
+          <option value="pricing">Pricing &amp; Plans</option>
+          <option value="faq">Customer FAQ / Rules</option>
+          <option value="mentors">Mentors &amp; Schedule</option>
+          <option value="policies">Policies &amp; Support</option>
+          <option value="general" selected>General Business Knowledge</option>
+        </select>
+      </div>
+      <div>
+        <label for="txtContent">Knowledge Content</label>
+        <textarea id="txtContent" rows="7" placeholder="Paste rules, schedules, product details, announcements, or any Q&amp;A text here..."></textarea>
+      </div>
+      <button class="btn btn-primary" onclick="submitDirectText()">Save &amp; Sync Across Entire System</button>
+      <div class="receipt" id="textReceipt"></div>
+    </div>
+
+    <!-- Right Card: Universal Drag & Drop File Upload -->
+    <div class="card">
+      <h2>2. Drag &amp; Drop Any Files</h2>
+      <p class="hint">Supports <strong>.txt</strong>, <strong>.md</strong>, <strong>.csv</strong>, <strong>.json</strong>, <strong>.html</strong>, <strong>.docx</strong> (Word), <strong>.xlsx</strong> (Excel), and text-based <strong>.pdf</strong> files. Drop one or multiple files below.</p>
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" multiple style="display:none" accept=".txt,.md,.json,.csv,.tsv,.html,.htm,.docx,.xlsx,.pdf,.yaml,.yml">
+        <div style="font-size:2rem; margin-bottom:8px;">📄</div>
+        <strong>Click to choose files</strong> or drag and drop them here
+        <div style="font-size:0.78rem; color:var(--muted); margin-top:6px;">Automatically extracted, chunked, and synchronized across AIOS, n8n, Discord &amp; Telegram</div>
+      </div>
+      <div class="receipt" id="fileReceipt"></div>
+    </div>
+  </div>
+
+  <!-- Search + Library -->
+  <div class="card">
+    <h2>3. Test Instant Search &amp; Manage Synced Knowledge</h2>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <input type="text" id="searchQuery" placeholder="Type any keyword or question to test live RAG retrieval..." style="flex:1; min-width:240px;" onkeydown="if(event.key==='Enter') runRagSearch()">
+      <button class="btn btn-blue" onclick="runRagSearch()">Test Live RAG Recall</button>
+    </div>
+    <div class="receipt" id="searchResults"></div>
+    <div class="kb-list" id="kbList"></div>
+  </div>
+</div>
+
+<script>
+function showReceipt(el, isError, html) {
+  el.className = isError ? 'receipt error' : 'receipt';
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/system-status').then(res => res.json());
+    document.getElementById('stAios').textContent = r.ok ? 'ONLINE (Ready)' : 'ERROR';
+    document.getElementById('stMongo').textContent = r.mongodb?.connected ? `SYNCED (${r.mongodb.db_name})` : 'DISK FALLBACK';
+    const n8 = r.n8n || {};
+    document.getElementById('stN8n').textContent = n8.reachable
+      ? (n8.api_checked ? `ONLINE (${n8.workflows_published}/${n8.workflows_total} Active)` : 'ONLINE (Fail-Safe Active)')
+      : 'FAIL-SAFE ACTIVE (Unpublished-Safe)';
+    document.getElementById('stCount').textContent = String(r.knowledge_items || 0);
+  } catch (e) {
+    document.getElementById('stAios').textContent = 'OFFLINE';
+  }
+}
+
+async function loadLibrary() {
+  const listEl = document.getElementById('kbList');
+  try {
+    const res = await fetch('/api/knowledge').then(r => r.json());
+    const items = res.items || [];
+    document.getElementById('stCount').textContent = String(items.length);
+    if (items.length === 0) {
+      listEl.innerHTML = '<div style="color:var(--muted); padding:14px; text-align:center;">No custom documents added yet. Paste text or drop a file above to populate the system.</div>';
+      return;
+    }
+    listEl.innerHTML = items.map(item => `
+      <div class="kb-item">
+        <div style="flex:1;">
+          <h4>${escapeHtml(item.title)} <span class="pill">${escapeHtml(item.category || 'general')}</span> <span class="pill">${item.chunks_count || 1} chunks</span></h4>
+          <pre>${escapeHtml(String(item.content || '').slice(0, 320))}</pre>
+          <div style="font-size:0.74rem; color:var(--muted); margin-top:4px;">Updated: ${escapeHtml(item.updated_at || '')}</div>
+        </div>
+        <button class="btn btn-danger" onclick="deleteItem('${escapeHtml(item.slug)}')">Delete</button>
+      </div>
+    `).join('');
+  } catch (e) {
+    listEl.innerHTML = `<div style="color:#f87171;">Failed to load knowledge list: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function submitDirectText() {
+  const rec = document.getElementById('textReceipt');
+  const title = document.getElementById('txtTitle').value.trim();
+  const category = document.getElementById('txtCategory').value;
+  const content = document.getElementById('txtContent').value.trim();
+  if (!content) {
+    showReceipt(rec, true, 'Please enter or paste text content before saving.');
+    return;
+  }
+  showReceipt(rec, false, 'Syncing across AIOS, MongoDB, n8n, Discord &amp; Telegram...');
+  try {
+    const res = await fetch('/api/knowledge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, category, content })
+    }).then(r => r.json());
+    if (!res.ok) {
+      showReceipt(rec, true, escapeHtml(res.error || 'Ingestion error'));
+      return;
+    }
+    const sr = res.sync_receipt || {};
+    showReceipt(rec, false, `
+      <strong>Synced Across All Channels:</strong> "${escapeHtml(res.entry.title)}"<br>
+      <span class="pill">Disk KB: OK</span>
+      <span class="pill">MongoDB Chunks: ${sr.mongodb?.chunks_indexed || 1}</span>
+      <span class="pill">n8n Route: ${escapeHtml(sr.n8n_rag?.via || 'fallback')}</span>
+      <span class="pill">Discord &amp; Telegram: Live</span>
+    `);
+    document.getElementById('txtTitle').value = '';
+    document.getElementById('txtContent').value = '';
+    loadAll();
+  } catch (e) {
+    showReceipt(rec, true, escapeHtml(e.message));
+  }
+}
+
+function readFileBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFiles(files) {
+  const rec = document.getElementById('fileReceipt');
+  if (!files || files.length === 0) return;
+  showReceipt(rec, false, `Processing ${files.length} file(s)...`);
+  const logs = [];
+  let hadErr = false;
+  for (const f of files) {
+    try {
+      const b64 = await readFileBase64(f);
+      const res = await fetch('/api/knowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: f.name.replace(/\.[^.]+$/, ''),
+          filename: f.name,
+          mimeType: f.type,
+          category: 'uploaded_file',
+          contentBase64: b64
+        })
+      }).then(r => r.json());
+      if (res.ok) {
+        logs.push(`<div><strong>OK:</strong> ${escapeHtml(f.name)} &rarr; ${res.entry.chunks_count} chunks (${escapeHtml(res.sync_receipt?.n8n_rag?.via || 'synced')})</div>`);
+      } else {
+        hadErr = true;
+        logs.push(`<div><strong>Error (${escapeHtml(f.name)}):</strong> ${escapeHtml(res.error)}</div>`);
+      }
+    } catch (e) {
+      hadErr = true;
+      logs.push(`<div><strong>Error (${escapeHtml(f.name)}):</strong> ${escapeHtml(e.message)}</div>`);
+    }
+  }
+  showReceipt(rec, hadErr, logs.join(''));
+  loadAll();
+}
+
+async function runRagSearch() {
+  const q = document.getElementById('searchQuery').value.trim();
+  const out = document.getElementById('searchResults');
+  if (!q) return;
+  const res = await fetch('/api/knowledge?q=' + encodeURIComponent(q)).then(r => r.json());
+  const m = res.matches || [];
+  if (m.length === 0) {
+    showReceipt(out, false, `No matching entries found for "${escapeHtml(q)}".`);
+    return;
+  }
+  showReceipt(out, false, `<strong>Top ${m.length} RAG Matches:</strong><br>` + m.map(x => `<div style="margin-top:6px;"><strong>${escapeHtml(x.title)}</strong> (score ${x.score}): ${escapeHtml(x.snippet.slice(0, 220))}</div>`).join(''));
+}
+
+async function deleteItem(slug) {
+  await fetch('/api/knowledge?slug=' + encodeURIComponent(slug), { method: 'DELETE' });
+  loadAll();
+}
+
+function loadAll() {
+  loadStatus();
+  loadLibrary();
+}
+
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+fi.addEventListener('change', (e) => handleFiles(e.target.files));
+dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dz.classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+});
+
+loadAll();
+</script>
+</body>
+</html>

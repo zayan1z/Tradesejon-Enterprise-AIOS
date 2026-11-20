@@ -7,8 +7,10 @@
 // 4) Clean Broadcast to all traders ONLY when explicitly instructed (e.g. "eb3ato lel nas kolaha").
 // 5) Multimodal Vision AI (Gemini 2.5 Flash), Groq Whisper STT, ElevenLabs TTS, PR Desk Ticket Routing, MongoDB Atlas.
 
-const { MongoClient } = require('mongodb');
-const nodemailer = require('nodemailer');
+let MongoClient = null;
+try { ({ MongoClient } = require('mongodb')); } catch {}
+let nodemailer = null;
+try { nodemailer = require('nodemailer'); } catch {}
 
 // API & Bot Configuration
 const TRADING_TOKEN = process.env.TELEGRAM_TRADER_BOT_TOKEN || ""; // @YOUR_TRADER_BOT
@@ -37,15 +39,15 @@ const ZOOM_MEETING_ID = "900000000000000002";
 const ZOOM_PASSCODE = "DISCORD-LIVE";
 
 // Email Transporter (Direct Gmail SMTP)
-const emailTransporter = nodemailer.createTransport({
+const emailTransporter = nodemailer ? nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 465,
   secure: true,
   auth: {
-    user: 'trader@example.com',
-    pass: ''
+    user: process.env.GMAIL_USER || 'trader@example.com',
+    pass: process.env.GMAIL_APP_PASSWORD || ''
   }
-});
+}) : { sendMail: async () => { throw new Error('nodemailer not installed'); } };
 
 // Memory cache for MongoDB client
 function createMockDb() {
@@ -66,7 +68,7 @@ function createMockDb() {
         toArray: async () => items.slice(0, 15),
         next: async () => items[0] || null
       }),
-      countDocuments: async () => items.length || 15
+      countDocuments: async () => items.length
     };
   };
   return {
@@ -78,17 +80,19 @@ const mockDbInstance = createMockDb();
 let cachedClient = null;
 async function getDb() {
   try {
+    if (!MONGO_ATLAS_URI || !MongoClient) return mockDbInstance;
     if (!cachedClient) {
+      const useTls = /^mongodb\+srv:\/\//i.test(MONGO_ATLAS_URI) || /[?&](?:tls|ssl)=true/i.test(MONGO_ATLAS_URI);
       const client = new MongoClient(MONGO_ATLAS_URI, {
         serverSelectionTimeoutMS: 3000,
         connectTimeoutMS: 5000,
-        tls: true,
+        ...(useTls ? { tls: true } : {}),
         maxPoolSize: 10
       });
       await client.connect();
       cachedClient = client;
     }
-    return cachedClient.db('automation_hub_dev');
+    return cachedClient.db(process.env.MONGODB_DB || 'tradesejon_prod');
   } catch (err) {
     cachedClient = null;
     console.warn('MongoDB connection error, switching gracefully to safe in-memory DB:', err.message);
@@ -440,8 +444,10 @@ const {
   isCommandText,
   isBroadcastCommand,
   getAllTraderChatIds,
+  matchOfficialFaqOrCapability,
   executeAgenticPlan
 } = require('./_agentic_brain');
+const { searchKnowledge } = require('./_knowledge_sync');
 
 async function getLiveZoomConfig(db) {
   const camp = await db.collection('campaigns').findOne({ _id: 'workshop-poc' }).catch(() => null);
@@ -1017,10 +1023,12 @@ async function handleTelegramWebhook(req, res) {
         `🔑 Passcode: <b>${escapeHtml(z.zoomPasscode)}</b>\n\nنراك في الجلسة القادمة!`;
     } else if (isCheckoutQuery && !isPaid) {
       const qrUrl = QR_PHOTO_URL;
-      aiAnswer = `🎯 <b>أهلاً بك في مجتمع Tradesejon للتداول الاحترافي!</b> 🚀\n\n` +
-        `بناءً على طلبك، إليك رمز QR ورابط الدفع لتفعيل باقة جلسات التداول VIP الحية ($0 مجاناً لأول 7 أيام لتأكيد المقعد ثم $29 شهرياً):\n\n` +
+      const vipUsd = process.env.VIP_MONTHLY_USD || '45';
+      const brandName = process.env.BRAND_NAME || 'Tradesejon';
+      aiAnswer = `🎯 <b>أهلاً بك في مجتمع ${escapeHtml(brandName)} للتداول الاحترافي!</b> 🚀\n\n` +
+        `إليك رمز QR ورابط التفعيل المباشر لباقة Discord VIP + Scanner ($${escapeHtml(vipUsd)} شهرياً via Whop):\n\n` +
         `🔗 <b>رابط التفعيل المباشر:</b>\n<a href="${WHOP_CHECKOUT_URL}">${WHOP_CHECKOUT_URL}</a>\n\n` +
-        `امسح كود الـ QR أو اضغط على الرابط للتفعيل الفوري وتأمين مقعدك، وسيصلك رابط جلسة Zoom المباشرة فوراً! 🚀`;
+        `امسح كود الـ QR أو اضغط على الرابط للتفعيل الفوري وتأمين مقعدك! 🚀`;
 
       if (!isTestCall) {
         await tgCall(TRADING_TOKEN, 'sendPhoto', {
@@ -1032,7 +1040,17 @@ async function handleTelegramWebhook(req, res) {
         });
       }
     } else {
-      aiAnswer = await callGroqEgyptianAi(userQuery || 'مرحباً، كيف يمكنني الاستفادة من مجتمع Tradesejon؟');
+      const unifiedFaq = matchOfficialFaqOrCapability(userQuery || '');
+      if (unifiedFaq) {
+        aiAnswer = unifiedFaq;
+      } else {
+        const kbHits = await searchKnowledge(db, userQuery || '', 3).catch(() => []);
+        if (kbHits.length > 0 && kbHits[0].score >= 2) {
+          aiAnswer = `📚 <b>${escapeHtml(kbHits[0].title)}</b>\n\n${escapeHtml(kbHits[0].snippet)}`;
+        } else {
+          aiAnswer = await callGroqEgyptianAi(userQuery || 'مرحباً، كيف يمكنني الاستفادة من مجتمع Tradesejon؟');
+        }
+      }
     }
 
     // Auto-dispatch verified email invitation if trader provided an email address

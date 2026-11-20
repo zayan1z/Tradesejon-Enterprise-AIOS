@@ -1,4 +1,10 @@
 db.leads.createIndex({ email: 1 }, { unique: true, sparse: true });
 db.members.createIndex({ discord_user_id: 1 }, { unique: true, sparse: true });
+db.trading_leads.createIndex({ email: 1 }, { sparse: true });
+db.contacts.createIndex({ email: 1 }, { sparse: true });
+db.kb_articles.createIndex({ slug: 1 }, { unique: true, sparse: true });
+db.knowledge_chunks.createIndex({ slug: 1 });
+db.knowledge_chunks.createIndex({ keywords: 1 });
+db.aios_super_memory.createIndex({ key: 1 }, { unique: true, sparse: true });
 db.audit_logs.createIndex({ timestamp: -1 });
-print("Initialized White-Label CRM Indexes.");
+print("Initialized White-Label CRM & Knowledge Base Indexes.");

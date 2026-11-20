@@ -586,17 +586,53 @@ class SharedServices:
       (1) فيديوهات Member التعليمية -> (2) متابعة اللايف تريدينج اليومي باشتراك الديسكورد -> (3) حضور الـ Workshop.
 """
 
+    def _load_custom_knowledge_appendix(self) -> str:
+        """Load client-uploaded text/files synced via Knowledge Studio (disk JSON + MongoDB kb_articles)."""
+        entries: list[str] = []
+        kb_base = Path(self.cfg.tradesejon_knowledge_base_dir or r"./rag-knowledge-base")
+        custom_file = kb_base / "custom_knowledge.json"
+        if custom_file.exists():
+            try:
+                raw = json.loads(custom_file.read_text(encoding="utf-8"))
+                items = raw if isinstance(raw, list) else raw.get("entries", [])
+                for item in items[-25:]:
+                    title = str(item.get("title") or item.get("filename") or "Custom Knowledge").strip()
+                    body = str(item.get("content") or item.get("text") or "").strip()[:1200]
+                    if body:
+                        entries.append(f"[{title}]: {body}")
+            except Exception:
+                pass
+        for _, db in self._dual_dbs():
+            try:
+                for doc in db["kb_articles"].find({"slug": {"$ne": "tradesejon_official_17_faq_master_guide"}}).sort("updated_at", -1).limit(20):
+                    title = str(doc.get("title") or doc.get("slug") or "Article").strip()
+                    body = str(doc.get("content") or "").strip()[:1200]
+                    if body:
+                        line = f"[{title}]: {body}"
+                        if line not in entries:
+                            entries.append(line)
+                break
+            except Exception:
+                continue
+        if not entries:
+            return ""
+        return "\n\n--- CLIENT CUSTOM KNOWLEDGE & UPLOADED FILES ---\n" + "\n".join(entries[:25])
+
     def get_live_master_kb_prompt(self) -> str:
-        """Reload client Master Guide (.md & .json) dynamically on change and sync to MongoDB/AIOS memory."""
-        kb_root = Path(self.cfg.tradesejon_knowledge_base_dir or r"./data/workspace") / "root"
+        """Reload client Master Guide & custom uploaded knowledge (.json/MongoDB) dynamically."""
+        kb_base = Path(self.cfg.tradesejon_knowledge_base_dir or r"./data/workspace")
+        kb_root = kb_base / "root"
         md_path = kb_root / "Tradesejon_Official_17_FAQ_Master_Guide.md"
         json_path = kb_root / "Tradesejon_Official_17_FAQ_Master_Guide.json"
+        custom_path = kb_base / "custom_knowledge.json"
+        appendix = self._load_custom_knowledge_appendix()
         if not md_path.exists():
-            return self.TRADESEJON_MASTER_KB_PROMPT
+            return f"{self.TRADESEJON_MASTER_KB_PROMPT}{appendix}"
         try:
             stat = md_path.stat()
             j_mtime = json_path.stat().st_mtime if json_path.exists() else 0.0
-            latest_mtime = max(stat.st_mtime, j_mtime)
+            c_mtime = custom_path.stat().st_mtime if custom_path.exists() else 0.0
+            latest_mtime = max(stat.st_mtime, j_mtime, c_mtime)
             if self._kb_cache_text and latest_mtime <= self._kb_cache_mtime:
                 return self._kb_cache_text
             md_text = md_path.read_text(encoding="utf-8")
@@ -637,11 +673,12 @@ class SharedServices:
                     )
                 except Exception:
                     pass
+            combined = f"{md_text}{appendix}"
             self._kb_cache_mtime = latest_mtime
-            self._kb_cache_text = md_text
-            return md_text
+            self._kb_cache_text = combined
+            return combined
         except Exception:
-            return self.TRADESEJON_MASTER_KB_PROMPT
+            return f"{self.TRADESEJON_MASTER_KB_PROMPT}{appendix}"
 
     @staticmethod
     def match_official_faq_context(query: str) -> str:
@@ -3091,14 +3128,14 @@ class SharedServices:
         return await asyncio.to_thread(_fetch)
 
     async def check_ecosystem_health(self) -> dict[str, str]:
-        """Probe n8n (5678), Nod (4310), AIOS (8088), WA (8089), and Discord Bridge (8095)."""
+        """Probe n8n (VPS/Docker), AIOS Cloud, Knowledge Sync, and Discord Bridge."""
         sess = await self.get_http()
+        n8n_base = (self.cfg.n8n_base_url or "http://127.0.0.1:5678").rstrip("/")
         probes = {
-            "AIOS 8088": f"{self.cfg.aios_base_url}/api/market-prices",
-            "WA Bridge 8089": "http://127.0.0.1:8089/api/status",
-            "Discord Bridge 8095": "http://127.0.0.1:8095/health",
-            "n8n 5678": "http://127.0.0.1:5678/healthz",
-            "n8n Nod 4310": "http://127.0.0.1:4310/",
+            "AIOS Web": f"{self.cfg.aios_base_url}/api/market-prices",
+            "Knowledge Studio": f"{self.cfg.aios_base_url}/api/knowledge",
+            "Discord Bridge": f"http://{self.cfg.bridge_host}:{self.cfg.bridge_port}/health",
+            "n8n Engine": f"{n8n_base}/healthz",
         }
         out: dict[str, str] = {}
         for name, url in probes.items():

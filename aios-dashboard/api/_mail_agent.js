@@ -1,5 +1,7 @@
-const { MongoClient } = require('mongodb');
-const nodemailer = require('nodemailer');
+let MongoClient = null;
+try { ({ MongoClient } = require('mongodb')); } catch {}
+let nodemailer = null;
+try { nodemailer = require('nodemailer'); } catch {}
 
 const GROQ_KEY = process.env.GROQ_API_KEY || "";
 const MONGO_ATLAS_URI = process.env.MONGODB_URI || "";
@@ -10,11 +12,11 @@ const ZOOM_MEETING_URL = "https://discord.com/channels/900000000000000001/900000
 const ZOOM_MEETING_ID = "900000000000000002";
 const ZOOM_PASSCODE = "DISCORD-LIVE";
 
-const DEFAULT_GMAIL_USER = process.env.SMTP_USER || '';
-const DEFAULT_GMAIL_PASS = process.env.SMTP_PASSWORD || '';
-const RESEND_OWNER_EMAIL = (process.env.RESEND_OWNER_EMAIL || 'trader@example.com').trim().toLowerCase();
+const DEFAULT_GMAIL_USER = process.env.SMTP_USER || process.env.GMAIL_USER || '';
+const DEFAULT_GMAIL_PASS = process.env.SMTP_PASSWORD || process.env.GMAIL_APP_PASSWORD || '';
+const RESEND_OWNER_EMAIL = (process.env.RESEND_OWNER_EMAIL || process.env.RESEND_FROM_EMAIL || 'trader@example.com').trim().toLowerCase();
 
-const DISCORD_BOT_TOKEN = process.env.DISCORD_CEO_BOT_TOKEN || "";
+const DISCORD_BOT_TOKEN = process.env.DISCORD_CEO_BOT_TOKEN || process.env.DISCORD_BOT_TOKEN || "";
 
 const DISCORD_KNOWN_MAP = JSON.parse(process.env.DISCORD_KNOWN_MAP_JSON || '{}');
 
@@ -93,6 +95,7 @@ function getSmtpCredentials() {
 }
 
 function createSmtpTransporter(port = 465) {
+  if (!nodemailer) return { sendMail: async () => { throw new Error('nodemailer package not installed'); } };
   const { user, pass, host } = getSmtpCredentials();
   return nodemailer.createTransport({
     host,
@@ -109,11 +112,18 @@ const emailTransporter = createSmtpTransporter(465);
 
 let cachedDbClient = null;
 async function getMailDb() {
+  if (!MONGO_ATLAS_URI || !MongoClient) return null;
   if (!cachedDbClient) {
-    cachedDbClient = new MongoClient(MONGO_ATLAS_URI, { serverSelectionTimeoutMS: 5000, connectTimeoutMS: 10000, tls: true, maxPoolSize: 10 });
+    const useTls = /^mongodb\+srv:\/\//i.test(MONGO_ATLAS_URI) || /[?&](?:tls|ssl)=true/i.test(MONGO_ATLAS_URI);
+    cachedDbClient = new MongoClient(MONGO_ATLAS_URI, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
+      ...(useTls ? { tls: true } : {}),
+      maxPoolSize: 10
+    });
     await cachedDbClient.connect();
   }
-  return cachedDbClient.db('automation_hub_dev');
+  return cachedDbClient.db(process.env.MONGODB_DB || 'tradesejon_prod');
 }
 
 const NAME_TRANSLITERATIONS = {
@@ -193,6 +203,7 @@ function stripConnectorsFromTarget(rawTarget) {
   let t = String(rawTarget || '').trim();
   // Remove leading prepositions or mail words
   t = t.replace(/^(?:mail|email|e-mail|ايميل|إيميل|مايل|ميل|رسالة|رساله|بريد|دعوة|دعوه|شير|فورا|فوراً|دلوقتي|حالا|حالاً|le|li|to|for|لـ|لرقم|لعميل|لمتداول|ل)\s+/i, '').trim();
+  t = t.replace(/(?:\s+(?:3la|ala|on|via|على|ع|عبر)\s*(?:discord|ديسكورد|دسكورد|telegram|تيليجرام|email|mail|ايميل|إيميل))+$/i, '').trim();
   t = t.replace(/^لـ\s*/i, '').trim();
   // Strip trailing connector words
   const tokens = t.split(/\s+/);

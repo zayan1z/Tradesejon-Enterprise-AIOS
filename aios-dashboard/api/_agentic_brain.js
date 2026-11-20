@@ -14,6 +14,20 @@ const {
   DISCORD_KNOWN_MAP,
   dispatchDiscordDmDirectly
 } = require('./_mail_agent');
+const { ingestKnowledge, searchKnowledge } = require('./_knowledge_sync');
+
+function getBrandCfg() {
+  return {
+    brand: process.env.BRAND_NAME || 'Tradesejon',
+    mentors: process.env.MENTORS_LIST || 'Lead Strategist, Mentor Alpha, Mentor Beta, Mentor Gamma, Mentor Delta',
+    platforms: process.env.SUPPORTED_PLATFORMS || 'Webull, Interactive Brokers (IBKR), TradingView',
+    schedule: process.env.LIVE_SESSION_SCHEDULE || 'Mon-Fri 9:30 PM Local Time',
+    vipUsd: process.env.VIP_MONTHLY_USD || '45',
+    memberPrice: process.env.WORKSHOP_MEMBER_PRICE || '4,000',
+    nonMemberPrice: process.env.WORKSHOP_NONMEMBER_PRICE || '6,000',
+    privateUsd: process.env.PRIVATE_SESSION_USD || '100',
+  };
+}
 
 const GROQ_KEY = process.env.GROQ_API_KEY || "";
 const GEMINI_KEY = process.env.GEMINI_API_KEY || "";
@@ -229,18 +243,15 @@ function matchOfficialFaqOrCapability(userPrompt, livePricesFeed = '', stats = n
   const p = String(userPrompt || '').trim().toLowerCase();
   if (!p) return null;
 
-  // 1. CEO Agentic AI Capabilities (bt3rf t3ml eh / بتعرف تعمل ايه)
-  if (/(?:bt3rf\s*t3ml\s*eh|بتعرف\s*تعمل\s*ايه|بتعمل\s*ايه|خدماتكم|خدماتك|امكانياتك|إمكانياتك|services|who\s*are\s*you|ما\s*هي\s*قدراتك|انت\s*مين)/i.test(p)) {
-    return `👑 <b>أهلاً بك يا فندم! أنا العقل التنفيذي الموحد (CEO Agentic AI) لمنظومة Tradesejon</b> 🚀\n\n` +
-      `أنا أربط كافة قنوات المنظومة (بوت CEO <code>@YOUR_CEO_BOT</code>، بوت PR <code>@YOUR_PR_BOT</code>، بوت الديسكورد <code>Tradesejon Systems</code> و <code>Tradesejon</code>، وشات AIOS Web) بنفس الذاكرة وقاعدة البيانات في MongoDB Atlas. إليك ما أنفذه لك فوراً بأي أمر بالعامية المصرية أو English:\n\n` +
-      `1️⃣ <b>تغذية الأسعار اللحظية (Live Institutional Feed):</b> متابعة لحظية لأسعار الذهب والبيتكوين وناسداك والعملات بالثانية.\n` +
-      `2️⃣ <b>التواصل الشامل مع المتداولين (Omnichannel Delivery):</b> إرسال رسائل خاصة مؤكدة على الديسكورد (DMs)، وبوت التليجرام، والإيميلات الرسمية عبر Gmail SMTP.\n` +
-      `3️⃣ <b>بث الميديا والملفات:</b> بث الصور، الفيديوهات، الستيكرات، والتنبيهات لجميع المتداولين المشتركين بنقرة واحدة.\n` +
-      `4️⃣ <b>إدارة وتحديث الجلسات:</b> تغيير مواعيد جلسات التداول VIP وروابط Zoom ومزامنتها على السيرفر فوراً.\n` +
-      `5️⃣ <b>إرسال كود الـ QR وروابط Whop:</b> إرسال باركود الدفع المباشر ورابط تفعيل باقات الديسكورد والورشات.\n` +
-      `6️⃣ <b>الرد الصوتي بالعامية المصرية:</b> استقبال رسائلك الصوتية وتحويلها لأوامر، والرد عليك بفويس نوت مصري راقٍ.\n` +
-      `7️⃣ <b>الدليل الشامل للأسئلة الشائعة (17 FAQ):</b> الإجابة الفورية عن استراتيجيات الـ Scalping، المنصات، الرسوم، والـ Mentors.\n` +
-      `8️⃣ <b>لوحة القيادة وإحصائيات الـ CRM:</b> فحص الليدات والمسجلين والتذاكر الحية بأمر <code>/kpis</code> أو <code>/menu</code>.`;
+  // 1. Capabilities & System Overview ("eh nzamko" / "bt3rf t3ml eh")
+  if (/(?:bt3rf\s*t3ml\s*eh|eh\s*nzamk[ou]?|nzamk[ou]?|nezamk[ou]?|بتشتغلوا?\s*ازاي|نظامكم\s*ايه|بتعرف\s*تعمل\s*ايه|بتعمل\s*ايه|خدماتكم|خدماتك|امكانياتك|إمكانياتك|services|how\s*does\s*it\s*work|who\s*are\s*you|ما\s*هي\s*قدراتك|انت\s*مين)/i.test(p)) {
+    const cfg = getBrandCfg();
+    return `👑 <b>أهلاً بك في منظومة ${escapeHtml(cfg.brand)} AIOS</b> 🚀\n\n` +
+      `نعمل بمنظومة متكاملة موحدة تربط <b>Discord VIP</b> و <b>Telegram</b> و <b>AIOS Dashboard</b>:\n\n` +
+      `1️⃣ <b>جلسات Live Trading يومية:</b> ${escapeHtml(cfg.schedule)} عبر Discord VIP.\n` +
+      `2️⃣ <b>فريق التوجيه (${escapeHtml(cfg.brand)} Mentors):</b> ${escapeHtml(cfg.mentors)}.\n` +
+      `3️⃣ <b>الباقات الرسمية:</b> اشتراك Discord + Scanner بقيمة <b>$${escapeHtml(cfg.vipUsd)}/شهر</b>، وورشة أوفلاين (${escapeHtml(cfg.memberPrice)} للأعضاء / ${escapeHtml(cfg.nonMemberPrice)} لغير المشتركين)، وجلسة خاصة 1-on-1 بقيمة <b>$${escapeHtml(cfg.privateUsd)}</b>.\n` +
+      `4️⃣ <b>المنصات المعتمدة:</b> ${escapeHtml(cfg.platforms)}.`;
   }
 
   // 2. Live Market Prices
@@ -368,14 +379,13 @@ function matchOfficialFaqOrCapability(userPrompt, livePricesFeed = '', stats = n
       `• <b>استخدام ذراع PlayStation للـ Hotkeys:</b> <a href="https://youtu.be/VIDEO_TEMPLATE_08">شرح السيت أب بالفيديو ↗</a>.`;
   }
 
-  // FAQ 14: مواعيد وجدول الـ Mentors الأسبوعي
-  if (/(?:مواعيد\s*المنتورز|جدول\s*اللايف|جدول\s*الاسبوع|mentors|مواعيد\s*اللايف\s*تريدينج)/i.test(p)) {
-    return `🗓️ <b>جدول الـ Mentors الأسبوعي في اللايف تريدينج داخل الديسكورد:</b>\n\n` +
-      `👑 <b>Lead Strategist (Member):</b> يومياً في جلسة الـ <b>After Hours</b>.\n` +
-      `🧠 <b>البشمهندس MentorAlpha (MentorAlpha):</b> كل <b>أحد</b> (لايف سيكولوجية التداول والتحكم بالأعصاب).\n` +
-      `⚡ <b>MentorGamma (MentorGamma):</b> كل <b>ثلاثاء وخميس</b>.\n` +
-      `📊 <b>MentorDelta (MentorDelta):</b> كل <b>اثنين وأربعاء</b>.\n` +
-      `🎯 <b>Mentor Epsilon (Mentor Epsilon):</b> كل <b>سبت وخميس</b>.`;
+  // FAQ 14: مواعيد وجدول الـ Mentors الأسبوعي ("meen homa elmentors" / "المنتورز")
+  if (/(?:meen\s*(?:homa|homma)?\s*(?:el\s*)?mentors?|el\s*mentors?|المنتورز|المدربين|المحاضرين|الموجهين|مواعيد\s*المنتورز|جدول\s*اللايف|جدول\s*الاسبوع|mentors|مواعيد\s*اللايف\s*تريدينج)/i.test(p)) {
+    const cfg = getBrandCfg();
+    return `🗓️ <b>فريق الموجهين المعتمد في ${escapeHtml(cfg.brand)}:</b>\n` +
+      `👨‍🏫 ${escapeHtml(cfg.mentors)}\n\n` +
+      `• <b>مواعيد البث المباشر:</b> ${escapeHtml(cfg.schedule)}\n` +
+      `• <b>جلسة المتابعة الخاصة (4 ساعات):</b> $${escapeHtml(cfg.privateUsd)} عبر Whop.`;
   }
 
   // FAQ 15: هو أنا ممكن أبدأ بكام؟
@@ -495,6 +505,29 @@ async function executeAgenticPlan({
 }) {
   const livePrices = getLiveInstitutionalFeed();
 
+  // Fast-Path: Executive Knowledge Base Ingestion via Chat (/addkb or "add kb:")
+  const addKbMatch = String(userPrompt || '').trim().match(/^(?:\/addkb|add\s+kb:|أضف\s+للمعرفة:?|احفظ\s+المعلومة:?)\s+([\s\S]+)$/i);
+  if (addKbMatch) {
+    const rawBody = addKbMatch[1].trim();
+    const pipeIdx = rawBody.indexOf('|');
+    const kbTitle = pipeIdx > 0 ? rawBody.slice(0, pipeIdx).trim() : rawBody.split('\n')[0].slice(0, 60);
+    const kbText = pipeIdx > 0 ? rawBody.slice(pipeIdx + 1).trim() : rawBody;
+    const ing = await ingestKnowledge(db, { title: kbTitle, content: kbText, category: 'executive_chat' });
+    const rep = ing.ok
+      ? `✅ <b>Knowledge Synced Across Entire System!</b>\n📚 <b>Title:</b> ${escapeHtml(ing.entry.title)}\n• Disk KB: Synced\n• MongoDB Chunks: ${ing.sync_receipt.mongodb.chunks_indexed}\n• n8n RAG Route: <code>${escapeHtml(ing.sync_receipt.n8n_rag.via)}</code>`
+      : `⚠️ Knowledge ingestion failed: ${escapeHtml(ing.error || 'Unknown error')}`;
+    if (!isTestCall && chatId && helpers.tgCall && currentToken) {
+      await helpers.tgCall(currentToken, 'sendMessage', { chat_id: chatId, text: rep, parse_mode: 'HTML' }).catch(() => {});
+    }
+    return {
+      ok: Boolean(ing.ok),
+      agentic: true,
+      thought: 'Ingested executive knowledge into Disk, MongoDB, and n8n RAG',
+      actionsExecuted: [{ tool: 'ingest_knowledge', ok: Boolean(ing.ok), slug: ing.entry?.slug }],
+      reply: rep
+    };
+  }
+
   // Fast-Path: Official 17 FAQs & Core Capabilities
   const faqAnswer = matchOfficialFaqOrCapability(userPrompt, livePrices);
   if (faqAnswer) {
@@ -530,7 +563,10 @@ async function executeAgenticPlan({
   const isDiscordCmd = /(?:discord|ديسكورد|دسكورد|3la\s*discord|ع\s*الديسكورد|عالديسكورد)/i.test(userPrompt);
   if (isDiscordCmd) {
     const parsedTarget = parseTargetAndContent(userPrompt);
-    const targetStr = parsedTarget?.targetStr || '900000000000000003';
+    const rawTarget = parsedTarget?.targetStr || '900000000000000003';
+    const targetStr = rawTarget
+      .replace(/(?:3la|ala|on|via|على|ع|عبر)\s*(?:discord|ديسكورد|دسكورد)/gi, '')
+      .trim() || rawTarget;
     let cleanMsg = (parsedTarget?.contentStr || userPrompt)
       .replace(/(?:3la\s*discord|ع\s*الديسكورد|عالديسكورد|discord|ديسكورد|دسكورد)\s*/gi, '')
       .replace(/^(?:2ollo|ollo|2olha|olha|قوله|قولها|قل\s*له|قل\s*لها|بلغ|بلغه|بلغها|إن|ان|en)\s+/i, '')
@@ -617,23 +653,42 @@ async function executeAgenticPlan({
     };
   }
 
-  // Fetch contextual state from MongoDB Atlas
-  const [mediaDoc, campaignDoc, nContacts, nLeadsV2, nTradingLeads, nInteractions, nConvs, nOutboundEmails] = await Promise.all([
+  // Fetch contextual state + Custom Knowledge Base hits
+  const [mediaDoc, campaignDoc, nContacts, nLeadsV2, nTradingLeads, nInteractions, nConvs, nOutboundEmails, kbHits] = await Promise.all([
     db.collection('pending_ceo_media').findOne({ _id: 'latest_media' }).catch(() => null),
     db.collection('campaigns').findOne({ _id: 'workshop-poc' }).catch(() => null),
-    db.collection('contacts').countDocuments().catch(() => 16),
-    db.collection('leads').countDocuments().catch(() => 12),
-    db.collection('trading_leads').countDocuments().catch(() => 15),
-    db.collection('interactions').countDocuments().catch(() => 33),
-    db.collection('conversations').countDocuments().catch(() => 11),
-    db.collection('outbound_emails').countDocuments().catch(() => 7)
+    db.collection('contacts').countDocuments().catch(() => 0),
+    db.collection('leads').countDocuments().catch(() => 0),
+    db.collection('trading_leads').countDocuments().catch(() => 0),
+    db.collection('interactions').countDocuments().catch(() => 0),
+    db.collection('conversations').countDocuments().catch(() => 0),
+    db.collection('outbound_emails').countDocuments().catch(() => 0),
+    searchKnowledge(db, userPrompt, 3).catch(() => [])
   ]);
 
+  if (kbHits.length > 0 && kbHits[0].score >= 3 && !isCommandText(userPrompt)) {
+    const top = kbHits[0];
+    const kbReply = `📚 <b>${escapeHtml(top.title)}</b>\n\n${escapeHtml(top.snippet)}`;
+    if (!isTestCall && chatId && helpers.tgCall && currentToken) {
+      await helpers.tgCall(currentToken, 'sendMessage', { chat_id: chatId, text: kbReply, parse_mode: 'HTML' }).catch(() => {});
+    }
+    return {
+      ok: true,
+      agentic: true,
+      thought: 'Matched synced custom knowledge base entry',
+      actionsExecuted: [{ tool: 'search_knowledge', ok: true, hits: kbHits.length }],
+      reply: kbReply
+    };
+  }
+
+  const kbContextText = kbHits.length > 0
+    ? '\n- نتائج قاعدة المعرفة المخصصة:\n' + kbHits.map(h => `  * ${h.title}: ${h.snippet.slice(0, 260)}`).join('\n')
+    : '';
   const statsObj = { nContacts, nLeadsV2, nTradingLeads, nInteractions, nConvs, nOutboundEmails };
   const contextSummary = `- القناة: ${channel}
 - أسعار السوق اللحظية: ${livePrices}
 - الجلسة الحالية: ${campaignDoc?.startAt || '9:30 PM'} | رابط Whop: ${campaignDoc?.whopCheckoutUrl || WHOP_CHECKOUT_URL}
-- إحصائيات: contacts=${nContacts}, leads=${nLeadsV2}, trading_leads=${nTradingLeads}, emails=${nOutboundEmails}`;
+- إحصائيات: contacts=${nContacts}, leads=${nLeadsV2}, trading_leads=${nTradingLeads}, emails=${nOutboundEmails}${kbContextText}`;
 
   const plan = await planAgenticActions(userPrompt, contextSummary);
   let replyText = plan.reply_html || 'تم تنفيذ الأمر بنجاح.';
