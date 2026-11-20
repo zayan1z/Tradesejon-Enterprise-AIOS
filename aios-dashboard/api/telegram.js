@@ -447,7 +447,7 @@ const {
   matchOfficialFaqOrCapability,
   executeAgenticPlan
 } = require('./_agentic_brain');
-const { searchKnowledge } = require('./_knowledge_sync');
+const { searchKnowledge, ingestKnowledge } = require('./_knowledge_sync');
 
 async function getLiveZoomConfig(db) {
   const camp = await db.collection('campaigns').findOne({ _id: 'workshop-poc' }).catch(() => null);
@@ -1346,6 +1346,28 @@ async function handleTelegramWebhook(req, res) {
     if (mediaInfo && mediaInfo.file_id && !replyTicketMatch) {
       const mediaBuf = await tgDownloadFile(currentToken, mediaInfo.file_id);
       let visionDesc = '';
+
+      if (
+        mediaInfo.type === 'document' &&
+        mediaBuf &&
+        /\.(?:txt|md|json|csv|tsv|html?|docx|xlsx|pdf|ya?ml)$/i.test(mediaInfo.filename || '') &&
+        (!effectiveText || /(?:\/addkb|add\s*kb|kb|knowledge|معرفة|قاعدة|sync|تحديث)/i.test(effectiveText))
+      ) {
+        const ing = await ingestKnowledge(db, {
+          title: (effectiveText || mediaInfo.filename).replace(/^\/addkb\s*/i, '').trim(),
+          filename: mediaInfo.filename,
+          mimeType: mediaInfo.mime_type,
+          category: `telegram_${bot}_upload`,
+          contentBase64: mediaBuf.toString('base64')
+        });
+        const kbMsg = ing.ok
+          ? `✅ <b>Document Synced System-Wide!</b>\n📄 <b>File:</b> ${escapeHtml(mediaInfo.filename)}\n• Chunks Indexed: <b>${ing.entry.chunks_count}</b>\n• Synced across AIOS, MongoDB, n8n RAG, Discord &amp; Telegram!`
+          : `⚠️ Could not extract knowledge from ${escapeHtml(mediaInfo.filename)}: ${escapeHtml(ing.error || 'Unknown error')}`;
+        if (!isTestCall) {
+          await tgCall(currentToken, 'sendMessage', { chat_id: chatId, text: kbMsg, parse_mode: 'HTML', reply_markup: getExecutiveMenuMarkup() });
+        }
+        return res.status(200).json({ ok: Boolean(ing.ok), action: 'ingest_document', entry: ing.entry, reply: kbMsg });
+      }
 
       // If admin sent a voice note on PR/CEO bot without caption, ALWAYS transcribe it and execute as spoken voice command!
       wasVoiceNoteCommand = false;

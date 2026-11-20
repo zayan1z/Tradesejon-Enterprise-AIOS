@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 from typing import Awaitable, Callable
 
 import discord
@@ -447,12 +448,36 @@ class PRDeskBotClient(discord.Client):
         ):
             return
         content = (message.content or "").strip()
-        if not content:
-            return
         ok, _ = is_pr_authorized(message.author, message.channel, message.guild, self.cfg)
         if not ok:
             return
+        if message.attachments:
+            att = message.attachments[0]
+            ext = att.filename.lower().rsplit(".", 1)[-1] if "." in att.filename else ""
+            if ext in ("txt", "md", "json", "csv", "tsv", "html", "htm", "docx", "xlsx", "pdf", "yaml", "yml"):
+                data_bytes, _, status = await self.services.safe_download_discord_attachment(att)
+                if status == "ok" and data_bytes is not None:
+                    sync_res = await self.services.sync_knowledge_to_ecosystem(
+                        title=content or att.filename,
+                        filename=att.filename,
+                        content_bytes=data_bytes,
+                        category="discord_pr_upload",
+                    )
+                    msg = f"✅ **Synced Document `{att.filename}` Across AIOS, Knowledge Base, RAG, Discord & Telegram!**" if sync_res.get("ok") else f"⚠️ Sync failed: {sync_res.get('error')}"
+                    await message.reply(safe_discord_text(msg), allowed_mentions=safe_allowed_mentions())
+                    return
+        if not content:
+            return
         if isinstance(message.channel, discord.DMChannel) or (self.user and self.user in message.mentions):
             cleaned = content.replace(f"<@{self.user.id}>", "").replace(f"<@!{self.user.id}>", "").strip() if self.user else content
-            reply = await self.services.ask_pr_ai_draft(cleaned or "مرحباً، كيف أساعد فريق العلاقات العامة؟")
+            if re.match(r"^(?:/addkb|add\s+kb:|أضف\s+للمعرفة:?|احفظ\s+المعلومة:?)\s+", cleaned, re.IGNORECASE):
+                raw_kb = re.sub(r"^(?:/addkb|add\s+kb:|أضف\s+للمعرفة:?|احفظ\s+المعلومة:?)\s+", "", cleaned, count=1, flags=re.IGNORECASE).strip()
+                kb_title, kb_body = (raw_kb.split("|", 1)[0].strip(), raw_kb.split("|", 1)[1].strip()) if "|" in raw_kb else (raw_kb.splitlines()[0][:60], raw_kb)
+                sync_res = await self.services.sync_knowledge_to_ecosystem(title=kb_title, content=kb_body, category="discord_pr_chat")
+                reply = f"✅ **Knowledge Synced Across AIOS, MongoDB, n8n RAG, Discord & Telegram:** `{kb_title}`" if sync_res.get("ok") else f"⚠️ Failed: {sync_res.get('error')}"
+            elif re.match(r"^(?:/updatecrm|3addel|ghayyer|عدل|غير|حدث)\b", cleaned, re.IGNORECASE):
+                res = await self.services.ask_ceo_agent(cleaned, discord_user_id=str(message.author.id))
+                reply = res.get("reply") or "✅ CRM updated."
+            else:
+                reply = await self.services.ask_pr_ai_draft(cleaned or "مرحباً، كيف أساعد فريق العلاقات العامة؟")
             await message.reply(safe_discord_text(reply), allowed_mentions=safe_allowed_mentions())

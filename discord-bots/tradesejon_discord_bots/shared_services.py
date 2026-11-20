@@ -3282,3 +3282,86 @@ class SharedServices:
         except Exception:
             return []
         return []
+
+    async def sync_knowledge_to_ecosystem(
+        self,
+        *,
+        title: str = "",
+        content: str = "",
+        filename: str = "",
+        content_bytes: bytes | None = None,
+        category: str = "discord_sync",
+    ) -> dict[str, Any]:
+        """Push text or any supported file from Discord CEO/PR into AIOS Knowledge API, Disk KB & MongoDB."""
+        import base64
+        import hashlib
+
+        aios_res: dict[str, Any] = {}
+        if self.cfg.aios_base_url:
+            payload: dict[str, Any] = {"title": title or filename or "Discord Knowledge Entry", "category": category}
+            if filename:
+                payload["filename"] = filename
+            if content_bytes is not None:
+                payload["contentBase64"] = base64.b64encode(content_bytes).decode("ascii")
+            elif content:
+                payload["content"] = content
+            try:
+                sess = await self.get_http()
+                async with sess.post(
+                    f"{self.cfg.aios_base_url}/api/knowledge",
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as r:
+                    if r.status == 200:
+                        aios_res = await r.json()
+            except Exception as exc:
+                aios_res = {"ok": False, "error": str(exc)[:120]}
+
+        if aios_res.get("ok"):
+            self._kb_cache_mtime = 0.0
+            self._kb_cache_text = ""
+            return aios_res
+
+        # Local disk + MongoDB fallback when AIOS HTTP endpoint is offline
+        text_val = content.strip()
+        if not text_val and content_bytes is not None:
+            text_val = content_bytes.decode("utf-8", errors="ignore").strip()
+        if not text_val:
+            return {"ok": False, "error": "No readable text content provided"}
+
+        final_title = (title or filename or text_val.splitlines()[0][:60]).strip()
+        slug = f"dc_{hashlib.sha1(final_title.encode('utf-8')).hexdigest()[:10]}"
+        kb_dir = Path(self.cfg.tradesejon_knowledge_base_dir or r"./rag-knowledge-base")
+        try:
+            kb_dir.mkdir(parents=True, exist_ok=True)
+            cfile = kb_dir / "custom_knowledge.json"
+            existing = []
+            if cfile.exists():
+                raw = json.loads(cfile.read_text(encoding="utf-8"))
+                existing = raw if isinstance(raw, list) else raw.get("entries", [])
+            entries = [e for e in existing if e.get("slug") != slug]
+            entries.insert(0, {"slug": slug, "title": final_title, "category": category, "content": text_val[:32000], "updated_at": datetime.now(timezone.utc).isoformat()})
+            cfile.write_text(json.dumps({"updated_at": datetime.now(timezone.utc).isoformat(), "count": len(entries), "entries": entries}, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+
+        mongo_ok = False
+        now = datetime.now(timezone.utc)
+        for _, db in self._dual_dbs():
+            try:
+                db["kb_articles"].update_one(
+                    {"slug": slug},
+                    {"$set": {"slug": slug, "title": final_title, "category": category, "content": text_val[:32000], "updated_at": now}},
+                    upsert=True,
+                )
+                db["aios_super_memory"].update_one(
+                    {"key": f"kb_{slug}"},
+                    {"$set": {"key": f"kb_{slug}", "type": "universal_knowledge", "title": final_title, "ai_reply": text_val[:4000], "rule": f"[{final_title}] {text_val[:2000]}", "updated_at": now}},
+                    upsert=True,
+                )
+                mongo_ok = True
+            except Exception:
+                pass
+        self._kb_cache_mtime = 0.0
+        self._kb_cache_text = ""
+        return {"ok": True, "entry": {"slug": slug, "title": final_title}, "sync_receipt": {"mongodb": {"ok": mongo_ok}, "disk_kb": {"ok": True}}}

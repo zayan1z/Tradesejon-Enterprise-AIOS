@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 from typing import Awaitable, Callable
 
 import discord
@@ -677,10 +678,12 @@ class CEOBotClient(discord.Client):
 
         voice_transcript = ""
         vision_reply = ""
+        doc_sync_reply = ""
         if message.attachments:
             att = message.attachments[0]
             data_bytes, mime, status = await self.services.safe_download_discord_attachment(att)
             if status == "ok" and data_bytes is not None:
+                ext = att.filename.lower().rsplit(".", 1)[-1] if "." in att.filename else ""
                 if mime.startswith("audio/"):
                     voice_transcript = await self.services.transcribe_audio_groq(data_bytes, att.filename)
                     content = f"{content}\n{voice_transcript}".strip()
@@ -688,6 +691,21 @@ class CEOBotClient(discord.Client):
                     self._staged_media = {"bytes": data_bytes, "mime": mime, "filename": att.filename}
                     if not content or any(w in content.lower() for w in ("حلل", "analyze", "اشرح", "chart", "شوف")):
                         vision_reply = await self.services.analyze_image_gemini(data_bytes, mime, content)
+                elif ext in ("txt", "md", "json", "csv", "tsv", "html", "htm", "docx", "xlsx", "pdf", "yaml", "yml"):
+                    sync_res = await self.services.sync_knowledge_to_ecosystem(
+                        title=content or att.filename,
+                        filename=att.filename,
+                        content_bytes=data_bytes,
+                        category="discord_ceo_upload",
+                    )
+                    if sync_res.get("ok"):
+                        doc_sync_reply = f"✅ **Synced Document `{att.filename}` Across AIOS, Knowledge Base, RAG, MongoDB, Discord & Telegram!**"
+                    else:
+                        doc_sync_reply = f"⚠️ Could not ingest `{att.filename}`: {sync_res.get('error', 'Unknown error')}"
+
+        if doc_sync_reply:
+            await message.reply(safe_discord_text(doc_sync_reply), allowed_mentions=safe_allowed_mentions())
+            return
 
         if not content and self._staged_media:
             await message.reply("✅ تم استلام وحفظ الميديا بنجاح في غرفة العمليات! اكتب أمرك الآن (مثلاً: 'حلل الصورة' أو 'ابعتها للكل').", allowed_mentions=safe_allowed_mentions())
@@ -701,6 +719,11 @@ class CEOBotClient(discord.Client):
             media = self._staged_media
             sent_n = await self.broadcast_fn(content or "إشعار مباشر من إدارة Tradesejon 📢", media["bytes"], str(media["filename"]))  # type: ignore[index]
             reply = f"✅ تم بث الميديا بنجاح إلى {sent_n} قناة/متداول على Discord."
+        elif re.match(r"^(?:/addkb|add\s+kb:|أضف\s+للمعرفة:?|احفظ\s+المعلومة:?)\s+", content, re.IGNORECASE):
+            raw_kb = re.sub(r"^(?:/addkb|add\s+kb:|أضف\s+للمعرفة:?|احفظ\s+المعلومة:?)\s+", "", content, count=1, flags=re.IGNORECASE).strip()
+            kb_title, kb_body = (raw_kb.split("|", 1)[0].strip(), raw_kb.split("|", 1)[1].strip()) if "|" in raw_kb else (raw_kb.splitlines()[0][:60], raw_kb)
+            sync_res = await self.services.sync_knowledge_to_ecosystem(title=kb_title, content=kb_body, category="discord_ceo_chat")
+            reply = f"✅ **Knowledge Synced Across AIOS, MongoDB, n8n RAG, Discord & Telegram:** `{kb_title}`" if sync_res.get("ok") else f"⚠️ Failed: {sync_res.get('error')}"
         else:
             res = await self.services.ask_ceo_agent(content, discord_user_id=str(message.author.id), history=self._history[-6:])
             reply = res.get("reply") or "تم تنفيذ الأمر."
