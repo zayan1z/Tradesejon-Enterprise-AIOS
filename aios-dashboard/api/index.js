@@ -1265,6 +1265,35 @@ module.exports = async (req, res) => {
     if (mediaB64) {
       const fname = toEnglishDigits(body.media_name || 'media_file');
       const mime = String(body.media_mime || 'application/octet-stream').toLowerCase();
+      const isDocExt = /\.(?:txt|md|json|csv|tsv|html?|docx|xlsx|pdf|ya?ml)$/i.test(fname);
+      const wantsBroadcast = /(?:broadcast|بث\s*للكل|للناس|لكل\s*المتداولين)/i.test(q);
+      if (isDocExt && !wantsBroadcast) {
+        try {
+          const db = await getAtlasDb();
+          const ing = await ingestKnowledge(db, {
+            title: q && !q.startsWith('Broadcast ') && !q.startsWith('بث ') ? q : fname.replace(/\.[^.]+$/, ''),
+            filename: fname,
+            mimeType: mime,
+            category: 'aios_chat_upload',
+            contentBase64: mediaB64
+          });
+          if (!ing.ok) {
+            return res.status(400).json({ ok: false, error: ing.error, reply: `⚠️ ${ing.error}` });
+          }
+          const reply = isEng
+            ? `✅ Synced "${fname}" (${ing.entry.chunks_count} chunks) across AIOS Knowledge Base, MongoDB, n8n RAG, Discord & Telegram!`
+            : `✅ تمت قراءة ومزامنة الملف "${fname}" (${ing.entry.chunks_count} مقطع) في قاعدة المعرفة و AIOS و Discord و Telegram و n8n فوراً!`;
+          return res.status(200).json({
+            ok: true,
+            action: 'ingest_knowledge',
+            entry: ing.entry,
+            sync_receipt: ing.sync_receipt,
+            reply
+          });
+        } catch (err) {
+          return res.status(500).json({ ok: false, error: err.message, reply: `⚠️ ${err.message}` });
+        }
+      }
       try {
         const db = await getAtlasDb();
         const bRes = await broadcastMediaFromWeb(db, {
@@ -1525,6 +1554,7 @@ module.exports = async (req, res) => {
         currentToken: tg.CEO_TOKEN,
         isTestCall: true,
         channel: reqChannel,
+        history: Array.isArray(body.history) ? body.history : [],
         helpers: tg
       });
       const plain = String(result.reply || '').replace(/<[^>]+>/g, '');

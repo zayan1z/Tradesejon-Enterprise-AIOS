@@ -60,6 +60,12 @@ function createMockDb() {
       insertMany: async (docs) => { (docs || []).forEach(d => items.push(d)); return { insertedCount: (docs || []).length }; },
       updateOne: async () => ({ acknowledged: true, modifiedCount: 1 }),
       updateMany: async () => ({ acknowledged: true, modifiedCount: 1 }),
+      deleteOne: async (filter) => {
+        const idx = items.findIndex(x => !filter || Object.keys(filter).length === 0 || JSON.stringify(x).toLowerCase().includes(String(Object.values(filter)[0] || '').toLowerCase()));
+        if (idx >= 0) { items.splice(idx, 1); return { acknowledged: true, deletedCount: 1 }; }
+        return { acknowledged: true, deletedCount: 1 };
+      },
+      deleteMany: async () => { const n = items.length; items.length = 0; return { acknowledged: true, deletedCount: n }; },
       findOneAndUpdate: async (filter, update) => ({ value: update.$set || {} }),
       findOne: async (filter) => items[0] || null,
       find: () => ({

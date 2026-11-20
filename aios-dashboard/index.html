@@ -2949,20 +2949,28 @@ async function handleAiosMediaUpload(inputEl) {
       previewHtml += `<div style="margin-top:4px;">${toEnglishDigits(captionText)}</div>`;
     }
 
+    const isDocUpload = /\.(?:txt|md|json|csv|tsv|html?|docx|xlsx|pdf|ya?ml)$/i.test(fname);
+    const wantsBroadcast = /(?:broadcast|بث\s*للكل|للناس)/i.test(captionText);
     appendMsg(previewHtml, 'user');
-    showAiosTypingIndicator(true, isEn ? 'Broadcasting media….' : 'Thinking…. (جاري بث الميديا للمتداولين...)');
+    showAiosTypingIndicator(
+      true,
+      (isDocUpload && !wantsBroadcast)
+        ? (isEn ? 'Syncing document into Knowledge Base….' : 'Thinking…. (جاري قراءة ومزامنة الملف في قاعدة المعرفة...)')
+        : (isEn ? 'Broadcasting media….' : 'Thinking…. (جاري بث الميديا للمتداولين...)')
+    );
 
     try {
       const res = await fetch('/api/aios-chat', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
-          query: captionText || (isEn ? `Broadcast ${fname} to all traders` : `بث الملف ${fname} لكل المتداولين`),
+          query: captionText || ((isDocUpload && !wantsBroadcast) ? fname.replace(/\.[^.]+$/, '') : (isEn ? `Broadcast ${fname} to all traders` : `بث الملف ${fname} لكل المتداولين`)),
           media_base64: b64,
           media_name: fname,
           media_mime: mime,
           want_audio: true
-        })
+        }),
+        signal: AbortSignal.timeout(25000)
       });
       const data = await res.json();
       showAiosTypingIndicator(false);
@@ -3026,7 +3034,7 @@ async function sendChat(overrideText) {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ query: q, history: chatHistory.slice(-8), want_audio: true }),
-      signal: AbortSignal.timeout(9500)
+      signal: AbortSignal.timeout(25000)
     });
     const data = await res.json();
     const reply = data.reply || 'تم التنفيذ بنجاح.';
@@ -3034,7 +3042,7 @@ async function sendChat(overrideText) {
     chatHistory.push({ role: 'assistant', content: reply });
     try { refreshAll(); } catch (_) {}
   } catch (e) {
-    appendMsg('⚠️ تم استلام طلبك ومعالجته بنجاح عبر بروتوكول الحماية الذاتية والاستشفاء التلقائي لمنظومة Tradesejon.', 'ai');
+    appendMsg(`⚠️ ${e && e.message ? e.message : 'Request timed out or failed — please retry.'}`, 'ai');
   } finally {
     showAiosTypingIndicator(false);
   }

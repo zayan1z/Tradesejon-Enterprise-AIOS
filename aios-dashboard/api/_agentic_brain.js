@@ -14,7 +14,7 @@ const {
   DISCORD_KNOWN_MAP,
   dispatchDiscordDmDirectly
 } = require('./_mail_agent');
-const { ingestKnowledge, searchKnowledge } = require('./_knowledge_sync');
+const { ingestKnowledge, searchKnowledge, listKnowledge, deleteKnowledge } = require('./_knowledge_sync');
 
 function getBrandCfg() {
   return {
@@ -407,90 +407,219 @@ function matchOfficialFaqOrCapability(userPrompt, livePricesFeed = '', stats = n
   return null;
 }
 
-// Planning via Groq or Gemini Fallback
-async function planAgenticActions(userPrompt, contextSummary) {
-  const systemPrompt = `# PERSONA & EXECUTIVE MANDATE
-أنت العقل التنفيذي الموحد (Autonomous Agentic AI Brain) لمنظومة Tradesejon AIOS.
-أنت تدير وتوجه بوت CEO (@YOUR_CEO_BOT)، وبوت PR (@YOUR_PR_BOT)، وبوت الديسكورد (Tradesejon Systems)، وشات AIOS Web.
-استراتيجيتنا: US Small-Cap Hyper-Scalping، قراءة Level 2 و Time & Sales، وقاعدة "WIN BIG, win small, lose small".
-الأدوات المتاحة لك:
-1. broadcast_media | لبث ميديا معلقة
-2. broadcast_text | لبث إعلان نصي أو رابط Zoom لجميع المتداولين
-3. send_qr_payment | لإرسال QR الدفع ورابط Whop
-4. send_photo_or_media | لإرسال صورة محددة
-5. send_email | لإرسال إيميل تنفيذي رسمي عبر Gmail SMTP
-6. send_telegram_message | لإرسال رسالة تليجرام خاصة
-7. send_discord_message | لإرسال رسالة DM مباشرة لمستخدم ديسكورد (عبر Discord API / Bridge)
-8. send_voice_note | لإرسال فويس نوت مصري
-9. analyze_staged_media | لتحليل صورة
-10. query_crm_data | للاستعلام عن CRM
-11. manage_crm_contact | لإضافة أو تعديل عميل
-12. update_campaign_settings | لتحديث موعد الجلسة أو رابط Zoom
-13. direct_answer | للإجابة المباشرة
+// Planning via Groq (valid fast models) or Gemini Fallback with History
+async function planAgenticActions(userPrompt, contextSummary, history = []) {
+  const cfg = getBrandCfg();
+  const groqKey = process.env.GROQ_API_KEY || GROQ_KEY || '';
+  const geminiKey = process.env.GEMINI_API_KEY || GEMINI_KEY || '';
 
-السياق الحي:
+  const systemPrompt = `# PERSONA & EXECUTIVE MANDATE
+You are the Unified CEO Agentic AI Brain for ${cfg.brand} AIOS, synced 100% across AIOS Web Chat, Telegram (CEO & PR bots), Discord (CEO & PR bots), Knowledge Base / RAG, and MongoDB CRM.
+Respond in the user's language (natural Egyptian Arabic, Franco-Arabic, or English).
+NEVER fabricate delivery confirmations, emails, DMs, or statistics.
+Mentors: ${cfg.mentors} | Platforms: ${cfg.platforms} | VIP Monthly: $${cfg.vipUsd} | Schedule: ${cfg.schedule}.
+
+Available executable tools (return one or more in "actions" when an action/CRUD/search is requested):
+1. search_system | args: {"query": "...", "scope": "all|crm|knowledge|tickets"} -> Search CRM leads/contacts, support tickets, or Knowledge Base
+2. add_knowledge | args: {"title": "...", "content": "...", "category": "general|pricing|faq|policies"} -> Save & sync new rule/text/data everywhere
+3. delete_knowledge | args: {"slug_or_query": "..."} -> Delete 1 specific knowledge entry by exact title/slug (never wildcard)
+4. add_crm_lead | args: {"name": "...", "email": "...", "phone": "...", "tier": "...", "status": "prospect|vip_recurring"} -> Add/update lead & contact in CRM
+5. delete_crm_contact | args: {"target": "email or phone or exact full name"} -> Remove 1 specific CRM lead/contact (never wildcard)
+6. get_system_kpis | args: {} -> Return live CRM, Knowledge Base, and market stats
+7. update_campaign_settings | args: {"session_time": "...", "zoom_url": "...", "whop_url": "..."}
+8. send_email | args: {"target": "...", "content": "..."}
+9. send_discord_dm | args: {"target": "...", "message": "..."}
+10. direct_answer | args: {} -> Conversational answer using live context & Knowledge Base
+
+Live System Context:
 ${contextSummary}
 
-أخرج JSON فقط:
+Output valid JSON only:
 {"thought": "...", "actions": [{"tool": "...", "args": {}}], "reply_html": "..."}`;
 
-  const models = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
-  for (const model of models) {
+  const msgHistory = Array.isArray(history)
+    ? history.slice(-6).filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content)
+        .map(m => ({ role: m.role, content: String(m.content).slice(0, 600) }))
+    : [];
+
+  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  if (groqKey) {
+    for (const model of models) {
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'system', content: systemPrompt }, ...msgHistory, { role: 'user', content: userPrompt }],
+            response_format: { type: 'json_object' },
+            temperature: 0.2,
+            max_tokens: 1200
+          }),
+          signal: AbortSignal.timeout(5500)
+        });
+        const data = await res.json();
+        let rawContent = data.choices?.[0]?.message?.content;
+        if (rawContent) {
+          rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^```json|```$/gm, '').trim();
+          const parsed = JSON.parse(rawContent);
+          if (parsed && Array.isArray(parsed.actions)) return parsed;
+        }
+      } catch (_) {}
+    }
+  }
+
+  if (geminiKey) {
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+      const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${GROQ_KEY}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          response_format: { type: 'json_object' },
-          temperature: 0.2,
-          max_tokens: 1500
+          contents: [{ parts: [{ text: `${systemPrompt}\n\nUser request:\n${userPrompt}` }] }],
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 1200 }
         }),
-        signal: AbortSignal.timeout(4500)
+        signal: AbortSignal.timeout(5500)
       });
       const data = await res.json();
-      let rawContent = data.choices?.[0]?.message?.content;
-      if (rawContent) {
-        rawContent = rawContent.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^```json|```$/gm, '').trim();
-        const parsed = JSON.parse(rawContent);
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        rawText = rawText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^```json|```$/gm, '').trim();
+        const parsed = JSON.parse(rawText);
         if (parsed && Array.isArray(parsed.actions)) return parsed;
       }
     } catch (_) {}
   }
 
-  // Gemini Fallback
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: `${systemPrompt}\n\nطلب المدير:\n${userPrompt}` }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 1200 }
-      }),
-      signal: AbortSignal.timeout(4500)
-    });
-    const data = await res.json();
-    let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (rawText) {
-      rawText = rawText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/^```json|```$/gm, '').trim();
-      const parsed = JSON.parse(rawText);
-      if (parsed && Array.isArray(parsed.actions)) return parsed;
-    }
-  } catch (_) {}
+  return null;
+}
 
-  return {
-    thought: 'Fallback',
-    actions: [{ tool: 'direct_answer', args: {} }],
-    reply_html: `أهلاً بك يا فندم في غرفة عمليات <b>Tradesejon AIOS</b> 🚀\nالمنظومة متصلة بالكامل عبر تليجرام وديسكورد وقاعدة بياناتنا الحية.`
-  };
+async function executePlannedTool(db, action, ctx) {
+  const tool = String(action?.tool || 'direct_answer');
+  const args = action?.args || {};
+
+  if (tool === 'search_system') {
+    const q = String(args.query || ctx.userPrompt || '').trim();
+    const scope = String(args.scope || 'all').toLowerCase();
+    const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = esc ? { $regex: esc, $options: 'i' } : null;
+    const out = { tool, ok: true, crm: [], tickets: [], knowledge: [] };
+
+    if (scope === 'all' || scope === 'crm') {
+      try {
+        const filter = rx ? { $or: [{ full_name: rx }, { name: rx }, { email: rx }, { phone: rx }, { status: rx }] } : {};
+        const leads = await db.collection('trading_leads').find(filter).limit(5).toArray();
+        const contacts = await db.collection('contacts').find(filter).limit(5).toArray();
+        const seen = new Set();
+        for (const d of [...leads, ...contacts]) {
+          const idKey = String(d.email || d.phone || d.full_name || d.name || d._id);
+          if (!seen.has(idKey)) {
+            seen.add(idKey);
+            out.crm.push({ name: d.full_name || d.name || 'Lead', email: d.email || '', phone: d.phone || d.number || '', status: d.status || '' });
+          }
+        }
+      } catch {}
+    }
+    if (scope === 'all' || scope === 'tickets') {
+      try {
+        const filter = rx ? { $or: [{ query: rx }, { user_message: rx }, { fullName: rx }, { ticketCode: rx }] } : {};
+        const convs = await db.collection('conversations').find(filter).limit(4).toArray();
+        out.tickets = convs.map(c => ({ ticket: c.ticketCode || c.ticket_id || '', query: String(c.query || c.user_message || '').slice(0, 120) }));
+      } catch {}
+    }
+    if (scope === 'all' || scope === 'knowledge') {
+      out.knowledge = await searchKnowledge(db, q, 4).catch(() => []);
+    }
+    return out;
+  }
+
+  if (tool === 'add_knowledge') {
+    const title = String(args.title || 'Synced Rule').trim();
+    const content = String(args.content || '').trim();
+    if (!content) return { tool, ok: false, error: 'Missing knowledge content' };
+    const ing = await ingestKnowledge(db, { title, content, category: String(args.category || 'agentic_chat') });
+    return { tool, ok: Boolean(ing.ok), title: ing.entry?.title, chunks: ing.sync_receipt?.mongodb?.chunks_indexed, error: ing.error };
+  }
+
+  if (tool === 'delete_knowledge') {
+    const q = String(args.slug_or_query || args.slug || args.title || '').trim();
+    if (!q || q === '*' || q.toLowerCase() === 'all') {
+      return { tool, ok: false, error: 'Safety guard blocked wildcard or empty deletion. Specify an exact title or slug.' };
+    }
+    const { items } = await listKnowledge(db).catch(() => ({ items: [] }));
+    const qLow = q.toLowerCase();
+    const target = items.find(i => String(i.slug || '').toLowerCase() === qLow || String(i.title || '').toLowerCase() === qLow)
+      || items.find(i => String(i.title || '').toLowerCase().includes(qLow));
+    if (!target) return { tool, ok: false, error: `No knowledge entry matched "${q}".` };
+    const del = await deleteKnowledge(db, target.slug);
+    return { tool, ok: Boolean(del.ok), deleted_title: target.title, deleted_slug: target.slug };
+  }
+
+  if (tool === 'add_crm_lead') {
+    const name = String(args.name || 'New Lead').trim();
+    const email = String(args.email || '').trim().toLowerCase();
+    const phone = String(args.phone || '').trim();
+    if (!email && !phone) return { tool, ok: false, error: 'Provide an email or phone number to add a CRM lead.' };
+    if (phone && isCeoOwnerPhone(phone)) return { tool, ok: false, error: 'Safety guard blocked using CEO personal phone.' };
+    const now = new Date();
+    const filter = email ? { email } : { phone };
+    const doc = {
+      name, full_name: name, email: email || undefined, phone: phone || undefined,
+      status: String(args.status || 'prospect'), tier: String(args.tier || 'prospect'),
+      notes: String(args.notes || 'Added via AIOS CEO Agent'), updatedAt: now
+    };
+    await Promise.all([
+      db.collection('trading_leads').updateOne(filter, { $set: doc, $setOnInsert: { createdAt: now } }, { upsert: true }).catch(() => {}),
+      db.collection('contacts').updateOne(filter, { $set: { ...doc, fullName: name }, $setOnInsert: { createdAt: now } }, { upsert: true }).catch(() => {})
+    ]);
+    return { tool, ok: true, name, email, phone, status: doc.status };
+  }
+
+  if (tool === 'delete_crm_contact') {
+    const target = String(args.target || '').trim();
+    if (!target || target === '*' || target.toLowerCase() === 'all') {
+      return { tool, ok: false, error: 'Safety guard blocked wildcard CRM deletion. Specify email, phone, or exact name.' };
+    }
+    const esc = target.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp(`^${esc}$`, 'i');
+    const filter = { $or: [{ email: target.toLowerCase() }, { phone: target }, { number: target }, { full_name: rx }, { name: rx }, { fullName: rx }] };
+    const [r1, r2, r3] = await Promise.all([
+      db.collection('trading_leads').deleteOne(filter).catch(() => ({ deletedCount: 0 })),
+      db.collection('contacts').deleteOne(filter).catch(() => ({ deletedCount: 0 })),
+      db.collection('leads').deleteOne(filter).catch(() => ({ deletedCount: 0 }))
+    ]);
+    const totalDel = (r1.deletedCount || 0) + (r2.deletedCount || 0) + (r3.deletedCount || 0);
+    if (totalDel === 0) return { tool, ok: false, error: `No CRM record matched "${target}".` };
+    await db.collection('security_audit_logs').insertOne({ action: 'aios_delete_crm', target, deleted_records: totalDel, at: new Date() }).catch(() => {});
+    return { tool, ok: true, target, deleted_records: totalDel };
+  }
+
+  if (tool === 'update_campaign_settings') {
+    const patched = await updateCampaignSettings(db, args, ctx.channel).catch(() => null);
+    return { tool, ok: Boolean(patched), updated: patched };
+  }
+
+  if (tool === 'send_discord_dm') {
+    const profile = await resolveTargetProfile(db, args.target || '').catch(() => null);
+    const did = /^\d{16,21}$/.test(String(args.target || '').trim()) ? String(args.target).trim() : (profile?.discord_user_id || '');
+    if (!did) return { tool, ok: false, error: `No Discord User ID found for "${args.target || ''}".` };
+    const dmRes = await dispatchDiscordDmDirectly(did, args.message || 'Executive update');
+    return { tool, ok: Boolean(dmRes.ok && dmRes.delivered), userId: did, messageId: dmRes.messageId, error: dmRes.error };
+  }
+
+  if (tool === 'send_email') {
+    const profile = await resolveTargetProfile(db, args.target || '').catch(() => null);
+    const emails = profile?.emails?.length ? profile.emails : (String(args.target || '').includes('@') ? [String(args.target).trim().toLowerCase()] : []);
+    if (!emails.length) return { tool, ok: false, error: `No email address found for "${args.target || ''}".` };
+    const mailRes = await sendAiExecutiveEmail(db, emails, args.content || ctx.userPrompt, profile?.name || '');
+    return { tool, ok: Boolean(mailRes.ok), to: mailRes.to, messageId: mailRes.messageId, error: mailRes.error };
+  }
+
+  if (tool === 'get_system_kpis') {
+    return { tool, ok: true, ...ctx.statsObj, livePrices: ctx.livePrices };
+  }
+
+  return { tool, ok: true };
 }
 
 // Master Execution Flow
@@ -501,7 +630,8 @@ async function executeAgenticPlan({
   currentToken,
   isTestCall = false,
   helpers = {},
-  channel = 'telegram_ceo'
+  channel = 'telegram_ceo',
+  history = []
 }) {
   const livePrices = getLiveInstitutionalFeed();
 
@@ -666,32 +796,81 @@ async function executeAgenticPlan({
     searchKnowledge(db, userPrompt, 3).catch(() => [])
   ]);
 
-  if (kbHits.length > 0 && kbHits[0].score >= 3 && !isCommandText(userPrompt)) {
-    const top = kbHits[0];
-    const kbReply = `📚 <b>${escapeHtml(top.title)}</b>\n\n${escapeHtml(top.snippet)}`;
-    if (!isTestCall && chatId && helpers.tgCall && currentToken) {
-      await helpers.tgCall(currentToken, 'sendMessage', { chat_id: chatId, text: kbReply, parse_mode: 'HTML' }).catch(() => {});
-    }
-    return {
-      ok: true,
-      agentic: true,
-      thought: 'Matched synced custom knowledge base entry',
-      actionsExecuted: [{ tool: 'search_knowledge', ok: true, hits: kbHits.length }],
-      reply: kbReply
-    };
-  }
-
   const kbContextText = kbHits.length > 0
-    ? '\n- نتائج قاعدة المعرفة المخصصة:\n' + kbHits.map(h => `  * ${h.title}: ${h.snippet.slice(0, 260)}`).join('\n')
+    ? '\n- Knowledge Base Matches (Top 3):\n' + kbHits.map(h => `  * ${h.title}: ${h.snippet.slice(0, 260)}`).join('\n')
     : '';
   const statsObj = { nContacts, nLeadsV2, nTradingLeads, nInteractions, nConvs, nOutboundEmails };
-  const contextSummary = `- القناة: ${channel}
-- أسعار السوق اللحظية: ${livePrices}
-- الجلسة الحالية: ${campaignDoc?.startAt || '9:30 PM'} | رابط Whop: ${campaignDoc?.whopCheckoutUrl || WHOP_CHECKOUT_URL}
-- إحصائيات: contacts=${nContacts}, leads=${nLeadsV2}, trading_leads=${nTradingLeads}, emails=${nOutboundEmails}${kbContextText}`;
+  const contextSummary = `- Channel: ${channel}
+- Live Prices: ${livePrices}
+- Current Session: ${campaignDoc?.startAt || '9:30 PM'} | Whop URL: ${campaignDoc?.whopCheckoutUrl || WHOP_CHECKOUT_URL}
+- CRM Stats: contacts=${nContacts}, leads=${nLeadsV2}, trading_leads=${nTradingLeads}, emails=${nOutboundEmails}${kbContextText}`;
 
-  const plan = await planAgenticActions(userPrompt, contextSummary);
-  let replyText = plan.reply_html || 'تم تنفيذ الأمر بنجاح.';
+  let plan = await planAgenticActions(userPrompt, contextSummary, history);
+
+  // Deterministic Tool Fallback when LLM keys are unconfigured or unreachable
+  if (!plan) {
+    const low = String(userPrompt || '').toLowerCase();
+    if (/^(?:search|find|lookup|list|show|ابحث|دور|هات|اعرض)\b/i.test(low) || /\b(?:search\s+(?:system|crm|knowledge|leads)|list\s+leads)\b/i.test(low)) {
+      const qClean = userPrompt.replace(/^(?:search|find|lookup|list|show|ابحث|دور|هات|اعرض)\s*(?:for|in|system|crm|knowledge|leads|عن|في)?\s*/i, '').trim() || userPrompt;
+      plan = { thought: 'Deterministic system search', actions: [{ tool: 'search_system', args: { query: qClean, scope: 'all' } }], reply_html: '' };
+    } else if (/^(?:delete|remove|امسح|احذف)\s+(?:kb|knowledge|rule|doc|معلومة|قاعدة)\b/i.test(low)) {
+      const target = userPrompt.replace(/^(?:delete|remove|امسح|احذف)\s+(?:kb|knowledge|rule|doc|معلومة|قاعدة)\s*/i, '').trim();
+      plan = { thought: 'Deterministic KB delete', actions: [{ tool: 'delete_knowledge', args: { slug_or_query: target } }], reply_html: '' };
+    } else if (/^(?:delete|remove|امسح|احذف)\s+(?:lead|contact|user|عميل|متداول)\b/i.test(low)) {
+      const target = userPrompt.replace(/^(?:delete|remove|امسح|احذف)\s+(?:lead|contact|user|عميل|متداول)\s*/i, '').trim();
+      plan = { thought: 'Deterministic CRM delete', actions: [{ tool: 'delete_crm_contact', args: { target } }], reply_html: '' };
+    } else if (/^(?:add|create|اضف|أضف|سجل)\s+(?:lead|contact|عميل|متداول)\b/i.test(low)) {
+      const emailM = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      const phoneM = userPrompt.match(/\+?[0-9][0-9\s-]{7,15}/);
+      plan = { thought: 'Deterministic CRM add', actions: [{ tool: 'add_crm_lead', args: { name: userPrompt.split(/[,|]/)[0].replace(/^(?:add|create|اضف|أضف|سجل)\s+(?:lead|contact|عميل|متداول)\s*/i, '').trim() || 'New Lead', email: emailM?.[0] || '', phone: phoneM?.[0]?.replace(/[\s-]/g, '') || '' } }], reply_html: '' };
+    } else {
+      const cfg = getBrandCfg();
+      const kbSnippet = kbHits.length > 0 ? `\n\n📚 <b>${escapeHtml(kbHits[0].title)}:</b> ${escapeHtml(kbHits[0].snippet.slice(0, 350))}` : '';
+      plan = {
+        thought: 'Local smart summary',
+        actions: [{ tool: 'direct_answer', args: {} }],
+        reply_html: `🤖 <b>${escapeHtml(cfg.brand)} CEO Agentic AI</b>\n• Live CRM: <b>${nContacts}</b> contacts, <b>${nTradingLeads}</b> leads, <b>${nOutboundEmails}</b> emails.\n• Try: <code>/addkb Title | Rule</code>, <code>search &lt;topic&gt;</code>, <code>add lead &lt;name&gt; &lt;email&gt;</code>, or <code>/kpis</code>.${kbSnippet}`
+      };
+    }
+  }
+
+  // Execute all planned tools genuinely & build verified summary
+  const actionsExecuted = [];
+  const toolSummaries = [];
+  for (const act of (plan.actions || [])) {
+    if (!act || !act.tool || act.tool === 'direct_answer') {
+      actionsExecuted.push({ tool: 'direct_answer', ok: true });
+      continue;
+    }
+    const res = await executePlannedTool(db, act, { userPrompt, channel, statsObj, livePrices, helpers, currentToken });
+    actionsExecuted.push(res);
+    if (res.tool === 'search_system') {
+      const parts = [];
+      if (res.crm?.length) parts.push(`👥 <b>CRM (${res.crm.length}):</b> ` + res.crm.map(c => `${escapeHtml(c.name)} (${escapeHtml(c.email || c.phone || c.status)})`).join(' | '));
+      if (res.tickets?.length) parts.push(`🎫 <b>Tickets (${res.tickets.length}):</b> ` + res.tickets.map(t => `[${escapeHtml(t.ticket)}] ${escapeHtml(t.query.slice(0, 60))}`).join(' | '));
+      if (res.knowledge?.length) parts.push(`📚 <b>Knowledge (${res.knowledge.length}):</b> ` + res.knowledge.map(k => `<b>${escapeHtml(k.title)}</b>: ${escapeHtml(k.snippet.slice(0, 140))}`).join('\n• '));
+      toolSummaries.push(parts.length ? parts.join('\n') : `🔍 No matching records found across CRM, Tickets, or Knowledge Base.`);
+    } else if (!res.ok) {
+      toolSummaries.push(`⚠️ <b>${escapeHtml(res.tool)}:</b> ${escapeHtml(res.error || 'Action failed')}`);
+    } else if (res.tool === 'add_knowledge') {
+      toolSummaries.push(`✅ <b>Synced Knowledge:</b> ${escapeHtml(res.title)} (${res.chunks || 1} chunks) across AIOS, MongoDB, n8n, Discord &amp; Telegram.`);
+    } else if (res.tool === 'delete_knowledge') {
+      toolSummaries.push(`🗑️ <b>Deleted Knowledge Entry:</b> ${escapeHtml(res.deleted_title || res.deleted_slug)}`);
+    } else if (res.tool === 'add_crm_lead') {
+      toolSummaries.push(`✅ <b>Saved CRM Lead:</b> ${escapeHtml(res.name)} (${escapeHtml(res.email || res.phone)})`);
+    } else if (res.tool === 'delete_crm_contact') {
+      toolSummaries.push(`🗑️ <b>Removed CRM Record:</b> ${escapeHtml(res.target)} (${res.deleted_records} deleted)`);
+    } else if (res.tool === 'get_system_kpis') {
+      toolSummaries.push(`📊 <b>Live KPIs:</b> Contacts=${res.nContacts}, Leads=${res.nLeadsV2}, TradingLeads=${res.nTradingLeads}, Emails=${res.nOutboundEmails}`);
+    }
+  }
+
+  let replyText = '';
+  if (toolSummaries.length > 0) {
+    replyText = toolSummaries.join('\n\n') + (plan.reply_html && !actionsExecuted.some(a => !a.ok) ? `\n\n${plan.reply_html}` : '');
+  } else {
+    replyText = plan.reply_html || '✅ Done.';
+  }
 
   if (!isTestCall && chatId && helpers.tgCall && currentToken) {
     await helpers.tgCall(currentToken, 'sendMessage', {
@@ -705,7 +884,7 @@ async function executeAgenticPlan({
     ok: true,
     agentic: true,
     thought: plan.thought || 'Agentic execution completed',
-    actionsExecuted: plan.actions || [],
+    actionsExecuted,
     reply: replyText
   };
 }
