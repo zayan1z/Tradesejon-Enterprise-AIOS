@@ -830,7 +830,7 @@ class SharedServices:
         safe_cmd = sanitize_untrusted_text(command, max_len=2000)
         reach_ctx = ""
         lower_cmd = safe_cmd.lower()
-        if any(tok in lower_cmd for tok in ("http://", "https://", "search", "ابحث", "research", "github", "youtube", "$")):
+        if any(tok in lower_cmd for tok in ("http://", "https://", "search", "ابحث", "research", "github", "youtube", "$")) and "t.me/contact/" not in lower_cmd:
             reach_res = await self.agent_reach.smart_research(safe_cmd, limit=3)
             if reach_res.get("ok") and reach_res.get("summary"):
                 reach_ctx = f"\n\n[{reach_res.get('source', 'agent-reach')}]\n{reach_res['summary'][:1200]}"

@@ -689,8 +689,55 @@ async function executeAgenticPlan({
     };
   }
 
-  // Check Discord intent in user prompt
+  // Check Discord vs Targeted Single-User Telegram DM intent (NEVER broadcast when a specific user/link is given)
   const isDiscordCmd = /(?:discord|ديسكورد|دسكورد|3la\s*discord|ع\s*الديسكورد|عالديسكورد)/i.test(userPrompt);
+  const tgContactLink = userPrompt.match(/https?:\/\/t\.me\/contact\/([0-9]{5,16})(?::[^\s]+)?/i);
+  const tgUserLink = !tgContactLink ? userPrompt.match(/https?:\/\/t\.me\/([a-zA-Z0-9_]{3,32})\b/i) : null;
+  const isSingleTgCmd = Boolean(tgContactLink || (tgUserLink && !/^(?:joinchat|c|s|addstickers)$/i.test(tgUserLink[1])) || (!isDiscordCmd && !isBroadcastCommand(userPrompt, false) && /(?:telegram|تيليجرام|تليجرام|تيلجرام)/i.test(userPrompt) && /(?:eb3at|ab3at|ib3at|send|deliver|ابعت|أبعت|ارسل|أرسل)/i.test(userPrompt)));
+  if (isSingleTgCmd && !isBroadcastCommand(userPrompt, false)) {
+    const parsedTg = parseTargetAndContent(userPrompt);
+    let targetCid = tgContactLink ? tgContactLink[1] : '';
+    let targetLabel = targetCid || (tgUserLink ? `@${tgUserLink[1]}` : (parsedTg?.targetStr || ''));
+    let cleanMsg = (parsedTg?.contentStr || '')
+      .replace(/https?:\/\/t\.me\/\S+/gi, '')
+      .replace(/^(?:2ollo|2olo|2olha|قوله|قولها|بلغه|en|inn|that|saying)\s+/i, '')
+      .trim();
+    if (!cleanMsg) {
+      const mText = userPrompt.match(/(?:2ollo|2olo|قوله|بلغه|en|inn|that|saying)\s+(.+)$/i);
+      cleanMsg = mText ? mText[1].trim() : 'تنبيه خاص من إدارة المنظومة 🎯';
+    }
+
+    if (!targetCid && targetLabel) {
+      const prof = await resolveTargetProfile(db, targetLabel.replace(/^@/, '')).catch(() => null);
+      targetCid = prof?.chatId || prof?.telegram?.chatId || prof?.telegram_chat_id || '';
+      if (/^\d{5,16}$/.test(targetLabel.trim())) targetCid = targetLabel.trim();
+    }
+
+    if (!targetCid) {
+      const missingTg = `⚠️ Could not resolve a numeric Telegram chat_id for (${escapeHtml(targetLabel || 'target')}). No message was sent and no broadcast was triggered.`;
+      return { ok: false, agentic: true, thought: 'Targeted Telegram chat_id not found (broadcast prevented)', actionsExecuted: [{ tool: 'send_telegram_message', ok: false, broadcast_prevented: true }], reply: missingTg };
+    }
+
+    const tgSendTok = helpers.TRADING_TOKEN || helpers.CEO_TOKEN || process.env.TELEGRAM_TRADER_BOT_TOKEN || process.env.TELEGRAM_CEO_BOT_TOKEN || '';
+    if (!tgSendTok || !helpers.tgCall) {
+      return { ok: false, agentic: true, thought: 'Telegram bot token missing', actionsExecuted: [{ tool: 'send_telegram_message', ok: false }], reply: '⚠️ Telegram Bot Token not configured. Confirmation blocked.' };
+    }
+
+    const tgRes = await helpers.tgCall(tgSendTok, 'sendMessage', {
+      chat_id: targetCid,
+      text: escapeHtml(cleanMsg),
+      parse_mode: 'HTML'
+    }).catch(e => ({ ok: false, description: e.message }));
+
+    if (tgRes && tgRes.ok) {
+      const okRep = `✅ <b>Verified Delivered to Single Telegram User Only (No Broadcast)!</b>\n🆔 <b>Chat ID:</b> <code>${escapeHtml(targetCid)}</code>\n📝 <b>Message:</b> "${escapeHtml(cleanMsg)}"\n📌 <b>Message ID:</b> <code>${escapeHtml(String(tgRes.result?.message_id || ''))}</code>`;
+      return { ok: true, agentic: true, thought: 'Delivered targeted single-user Telegram DM', actionsExecuted: [{ tool: 'send_telegram_message', ok: true, single_user_only: true, chatId: targetCid, messageId: tgRes.result?.message_id }], reply: okRep };
+    }
+    const failRep = `⚠️ <b>Telegram API rejected direct delivery to Chat ID <code>${escapeHtml(targetCid)}</code>:</b> ${escapeHtml(tgRes?.description || 'Forbidden / user has not started the bot')}.\n<i>No broadcast was sent.</i>`;
+    return { ok: false, agentic: true, thought: 'Targeted Telegram DM rejected by Telegram API', actionsExecuted: [{ tool: 'send_telegram_message', ok: false, single_user_only: true, chatId: targetCid, error: tgRes?.description }], reply: failRep };
+  }
+
+  // Discord DM intent
   if (isDiscordCmd) {
     const parsedTarget = parseTargetAndContent(userPrompt);
     const rawTarget = parsedTarget?.targetStr || '900000000000000003';
