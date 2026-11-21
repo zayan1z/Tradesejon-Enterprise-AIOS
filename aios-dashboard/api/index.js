@@ -1606,5 +1606,120 @@ module.exports = async (req, res) => {
     });
   }
 
+  if (pathname === '/api/mcp' || pathname === '/api/mcp/tools') {
+    const db = await getAtlasDb();
+    if (req.method === 'GET') {
+      return res.status(200).json({
+        ok: true,
+        protocol: 'model-context-protocol',
+        version: '2024-11-05',
+        server: { name: 'tradesejon-aios-mcp', version: '2.0.0' },
+        tools: [
+          {
+            name: 'search_knowledge',
+            description: 'Semantic vector and keyword search across enterprise RAG knowledge base',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: { type: 'string', description: 'Search term or question' },
+                limit: { type: 'number', description: 'Max results (default 4)' }
+              },
+              required: ['query']
+            }
+          },
+          {
+            name: 'add_knowledge',
+            description: 'Ingest and broadcast a new rule, file, or knowledge document across AIOS, MongoDB, n8n, Discord & Telegram',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                title: { type: 'string' },
+                content: { type: 'string' },
+                category: { type: 'string' }
+              },
+              required: ['title', 'content']
+            }
+          },
+          {
+            name: 'get_system_kpis',
+            description: 'Fetch real-time CRM counts, active members, leads, and live market pricing',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'query_crm_contacts',
+            description: 'Search omnichannel contacts and trading leads by name, email, phone, or status',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                query: { type: 'string', description: 'Filter text' },
+                limit: { type: 'number', description: 'Max records (default 10)' }
+              }
+            }
+          }
+        ]
+      });
+    }
+
+    if (req.method === 'POST') {
+      const body = parseBody(req);
+      const toolName = String(body.tool || body.name || body.method || '').trim();
+      const args = body.arguments || body.args || body.params || {};
+
+      if (toolName === 'search_knowledge') {
+        const q = String(args.query || '').trim();
+        const limit = Number(args.limit || 4);
+        const hits = await searchKnowledge(db, q, limit).catch(() => []);
+        return res.status(200).json({ ok: true, tool: toolName, results: hits });
+      }
+
+      if (toolName === 'add_knowledge') {
+        const title = String(args.title || 'MCP Synced Knowledge').trim();
+        const content = String(args.content || '').trim();
+        const category = String(args.category || 'mcp_agent').trim();
+        if (!content) return res.status(400).json({ ok: false, error: 'Missing content parameter' });
+        const ing = await ingestKnowledge(db, { title, content, category });
+        return res.status(200).json({ ok: Boolean(ing.ok), tool: toolName, receipt: ing.sync_receipt, error: ing.error });
+      }
+
+      if (toolName === 'get_system_kpis') {
+        const prices = computeLivePrices();
+        const dash = loadDashboardSnapshot();
+        const nContacts = await db.collection('contacts').countDocuments().catch(() => 0);
+        const nTradingLeads = await db.collection('trading_leads').countDocuments().catch(() => 0);
+        const nLeadsV2 = await db.collection('leads').countDocuments().catch(() => 0);
+        return res.status(200).json({
+          ok: true,
+          tool: toolName,
+          kpis: {
+            contacts: nContacts,
+            trading_leads: nTradingLeads,
+            leads_v2: nLeadsV2,
+            session_time: dash.session_time || '09:30 PM'
+          },
+          market_prices: prices
+        });
+      }
+
+      if (toolName === 'query_crm_contacts') {
+        const q = String(args.query || '').trim();
+        const limit = Math.min(Number(args.limit || 10), 50);
+        const esc = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rx = esc ? { $regex: esc, $options: 'i' } : null;
+        const filter = rx ? { $or: [{ full_name: rx }, { name: rx }, { email: rx }, { phone: rx }, { status: rx }] } : {};
+        const contacts = await db.collection('contacts').find(filter).limit(limit).toArray().catch(() => []);
+        const clean = contacts.map(c => ({
+          name: c.full_name || c.name || 'Member',
+          email: c.email || '',
+          phone: c.phone || c.number || '',
+          status: c.status || 'active',
+          tier: c.tier || c.access_tier || 'standard'
+        }));
+        return res.status(200).json({ ok: true, tool: toolName, count: clean.length, contacts: clean });
+      }
+
+      return res.status(404).json({ ok: false, error: `Tool "${toolName}" not found` });
+    }
+  }
+
   return res.status(200).json({ ok: true, status: 'Tradesejon Serverless API Active' });
 };
