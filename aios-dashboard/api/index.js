@@ -18,7 +18,7 @@ const {
 } = require('./_mail_agent');
 const { sleep, getAllTraderChatIds } = require('./_agentic_brain');
 const { ingestKnowledge, listKnowledge, searchKnowledge, deleteKnowledge } = require('./_knowledge_sync');
-const { getN8nHealthAndWorkflows } = require('./_n8n_bridge');
+const { callN8nWithFallback, getN8nHealthAndWorkflows } = require('./_n8n_bridge');
 
 const MONGO_ATLAS_URI = process.env.MONGODB_URI || "";
 const MONGO_DB_NAME = process.env.MONGODB_DB || "tradesejon_prod";
@@ -1503,6 +1503,48 @@ module.exports = async (req, res) => {
         });
       }
     }
+    // n8n-First Autonomous Agentic Dispatch (with automatic seamless local self-healing fallback)
+    const n8nUrl = String(process.env.N8N_BASE_URL || process.env.N8N_WEBHOOK_BASE_URL || '').trim();
+    const n8nValidForEnv = Boolean(n8nUrl && (!process.env.VERCEL || !/127\.0\.0\.1|localhost/i.test(n8nUrl)));
+    if (n8nValidForEnv) {
+      try {
+        const n8nRes = await callN8nWithFallback('tradesejon-aios-chat', {
+          query: q,
+          message: q,
+          history: Array.isArray(body.history) ? body.history.slice(-8) : [],
+          channel: reqChannel,
+          actor: body.actor || reqChannel,
+          want_audio: Boolean(body.want_audio || body.audio_base64 || body.is_voice)
+        }, { baseUrl: n8nUrl, timeoutMs: 14000 });
+        if (n8nRes.ok && n8nRes.data && n8nRes.data.reply) {
+          const nPlain = String(n8nRes.data.reply || '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'");
+          let nAud = n8nRes.data.audioBase64 || '';
+          if (!nAud && (body.want_audio || body.audio_base64 || body.is_voice)) {
+            nAud = await fetchGoogleMasriTtsBase64(nPlain.slice(0, 400), isEng);
+          }
+          return res.status(200).json({
+            ok: true,
+            action: 'agentic',
+            agentic: true,
+            engine: 'n8n:' + n8nRes.via,
+            thought: n8nRes.data.thought || 'Executed via n8n Agentic AI',
+            actions: n8nRes.data.actions || n8nRes.data.actionsExecuted || [],
+            reply: toEnglishDigits(nPlain),
+            audio_base64: nAud || undefined,
+            audio_mime: nAud ? 'audio/mp3' : undefined
+          });
+        }
+      } catch (n8nErr) {
+        console.warn('n8n-First dispatch falling back cleanly:', n8nErr.message);
+      }
+    }
+
     // Universal agentic brain (same as CEO bot): mail, telegram, broadcast, CRM, memory
     try {
       const tg = require('./telegram.js').shared;
@@ -1533,6 +1575,7 @@ module.exports = async (req, res) => {
         ok: true,
         action: 'agentic',
         agentic: true,
+        engine: 'aios_local_self_heal',
         thought: result.thought,
         actions: result.actionsExecuted,
         reply: toEnglishDigits(plain),
