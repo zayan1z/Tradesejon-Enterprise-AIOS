@@ -1054,15 +1054,20 @@ async function sendChat(overrideText) {
     const res = await fetch('/api/aios-chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ query: q, history: chatHistory.slice(-8) })
+      body: JSON.stringify({ query: q, history: chatHistory.slice(-8), want_audio: true }),
+      signal: AbortSignal.timeout(58000)
     });
-    const data = await res.json();
-    const reply = data.reply || 'تم التنفيذ بنجاح.';
-    appendMsg(reply, 'ai');
-    chatHistory.push({ role: 'assistant', content: reply });
-    refreshAll();
+    const data = await res.json().catch(() => ({ ok: false, reply: `⚠️ Server returned HTTP ${res.status}` }));
+    if (!res.ok && !data.reply) {
+      appendMsg(`⚠️ Server error (HTTP ${res.status}) — please retry.`, 'ai');
+    } else {
+      const reply = data.reply || 'تم التنفيذ بنجاح.';
+      appendMsg(reply, 'ai', data.audio_base64);
+      chatHistory.push({ role: 'assistant', content: reply });
+      try { refreshAll(); } catch (_) {}
+    }
   } catch (e) {
-    appendMsg('⚠️ حدث خطأ في الاتصال بالخادم، جاري الاستشفاء التلقائي...', 'ai');
+    appendMsg(`⚠️ ${e && e.message ? e.message : 'Request timed out or failed — please retry.'}`, 'ai');
   }
 }
 

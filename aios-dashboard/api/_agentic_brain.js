@@ -175,14 +175,20 @@ async function updateCampaignSettings(db, patch = {}, channel = 'agentic_brain')
   return campSet;
 }
 
+async function safeFind(db, col, filter, proj) {
+  let cur = db.collection(col).find(filter);
+  if (cur && typeof cur.project === 'function') cur = cur.project(proj);
+  return cur.toArray();
+}
+
 async function getAllTraderChatIds(db, ceoChatId = process.env.CEO_CHAT_ID || "") {
   const [unsubLeads, v2Leads, legacyLeads, contacts, convs, tgMsgs] = await Promise.all([
-    db.collection('leads').find({ status: 'unsubscribed' }).project({ telegram: 1 }).toArray(),
-    db.collection('leads').find({ 'telegram.chatId': { $exists: true, $ne: null }, status: { $ne: 'unsubscribed' } }).project({ telegram: 1 }).toArray(),
-    db.collection('trading_leads').find({ $or: [{ 'telegram.chatId': { $exists: true, $ne: null } }, { chatId: { $exists: true, $ne: null } }] }).project({ telegram: 1, chatId: 1 }).toArray(),
-    db.collection('contacts').find({ $or: [{ 'telegram.chatId': { $exists: true, $ne: null } }, { chatId: { $exists: true, $ne: null } }] }).project({ telegram: 1, chatId: 1 }).toArray(),
-    db.collection('conversations').find({ platform: 'telegram_trading' }).project({ chat_id: 1, chatId: 1, user_id: 1 }).toArray(),
-    db.collection('telegram_messages').find({ bot_type: 'trading' }).project({ chat_id: 1, chatId: 1 }).toArray()
+    safeFind(db, 'leads', { status: 'unsubscribed' }, { telegram: 1 }),
+    safeFind(db, 'leads', { 'telegram.chatId': { $exists: true, $ne: null }, status: { $ne: 'unsubscribed' } }, { telegram: 1 }),
+    safeFind(db, 'trading_leads', { $or: [{ 'telegram.chatId': { $exists: true, $ne: null } }, { chatId: { $exists: true, $ne: null } }] }, { telegram: 1, chatId: 1 }),
+    safeFind(db, 'contacts', { $or: [{ 'telegram.chatId': { $exists: true, $ne: null } }, { chatId: { $exists: true, $ne: null } }] }, { telegram: 1, chatId: 1 }),
+    safeFind(db, 'conversations', { platform: 'telegram_trading' }, { chat_id: 1, chatId: 1, user_id: 1 }),
+    safeFind(db, 'telegram_messages', { bot_type: 'trading' }, { chat_id: 1, chatId: 1 })
   ]);
 
   const unsubSet = new Set(['999000111']);
@@ -419,17 +425,22 @@ Respond in the user's language (natural Egyptian Arabic, Franco-Arabic, or Engli
 NEVER fabricate delivery confirmations, emails, DMs, or statistics.
 Mentors: ${cfg.mentors} | Platforms: ${cfg.platforms} | VIP Monthly: $${cfg.vipUsd} | Schedule: ${cfg.schedule}.
 
-Available executable tools (return one or more in "actions" when an action/CRUD/search is requested):
+Available executable tools (return one or more in "actions" when an action/CRUD/search/dispatch is requested; for compound requests return MULTIPLE actions in execution order):
 1. search_system | args: {"query": "...", "scope": "all|crm|knowledge|tickets"} -> Search CRM leads/contacts, support tickets, or Knowledge Base
 2. add_knowledge | args: {"title": "...", "content": "...", "category": "general|pricing|faq|policies"} -> Save & sync new rule/text/data everywhere
 3. delete_knowledge | args: {"slug_or_query": "..."} -> Delete 1 specific knowledge entry by exact title/slug (never wildcard)
-4. add_crm_lead | args: {"name": "...", "email": "...", "phone": "...", "tier": "...", "status": "prospect|vip_recurring"} -> Add/update lead & contact in CRM
-5. delete_crm_contact | args: {"target": "email or phone or exact full name"} -> Remove 1 specific CRM lead/contact (never wildcard)
-6. get_system_kpis | args: {} -> Return live CRM, Knowledge Base, and market stats
-7. update_campaign_settings | args: {"session_time": "...", "zoom_url": "...", "whop_url": "..."}
-8. send_email | args: {"target": "...", "content": "..."}
-9. send_discord_dm | args: {"target": "...", "message": "..."}
-10. direct_answer | args: {} -> Conversational answer using live context & Knowledge Base
+4. list_knowledge | args: {} -> List all saved Knowledge Base articles & synced rules
+5. add_crm_lead | args: {"name": "...", "email": "...", "phone": "...", "tier": "...", "status": "prospect|vip_recurring"} -> Add/update lead & contact in CRM
+6. delete_crm_contact | args: {"target": "email or phone or exact full name"} -> Remove 1 specific CRM lead/contact (never wildcard)
+7. approve_lead | args: {"target": "latest | email | phone | exact full name", "plan": "..."} -> Approve latest/named lead and send welcome + approved plan email
+8. get_system_kpis | args: {} -> Return live CRM, Knowledge Base, and market stats
+9. get_market_prices | args: {} -> Return live institutional market feeds (XAUUSD, BTCUSDT, EURUSD, etc.)
+10. update_campaign_settings | args: {"session_time": "...", "zoom_url": "...", "whop_url": "..."} -> Update session time/Zoom/Whop across MongoDB & all bots
+11. send_email | args: {"target": "...", "content": "..."} -> Send executive email via Gmail SMTP to resolved CRM lead/email
+12. send_discord_dm | args: {"target": "...", "message": "..."} -> Send direct message to a specific Discord user ID/name
+13. send_telegram_dm | args: {"target": "t.me link, chat_id, @username, phone, email, or name", "message": "..."} -> Send direct Telegram message to ONE specific user ONLY (NEVER broadcast)
+14. broadcast_telegram | args: {"message": "..."} -> Broadcast announcement to ALL active Telegram subscribers (USE ONLY when explicitly asked to notify all subscribers/traders/everyone)
+15. direct_answer | args: {} -> Conversational answer using live context & Knowledge Base
 
 Live System Context:
 ${contextSummary}
@@ -442,7 +453,7 @@ Output valid JSON only:
         .map(m => ({ role: m.role, content: String(m.content).slice(0, 600) }))
     : [];
 
-  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+  const models = ['openai/gpt-oss-120b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-20b', 'llama-3.3-70b-versatile'];
   if (groqKey) {
     for (const model of models) {
       try {
@@ -454,9 +465,9 @@ Output valid JSON only:
             messages: [{ role: 'system', content: systemPrompt }, ...msgHistory, { role: 'user', content: userPrompt }],
             response_format: { type: 'json_object' },
             temperature: 0.2,
-            max_tokens: 1200
+            max_tokens: 2000
           }),
-          signal: AbortSignal.timeout(5500)
+          signal: AbortSignal.timeout(9500)
         });
         const data = await res.json();
         let rawContent = data.choices?.[0]?.message?.content;
@@ -479,7 +490,7 @@ Output valid JSON only:
           contents: [{ parts: [{ text: `${systemPrompt}\n\nUser request:\n${userPrompt}` }] }],
           generationConfig: { responseMimeType: 'application/json', temperature: 0.2, maxOutputTokens: 1200 }
         }),
-        signal: AbortSignal.timeout(5500)
+        signal: AbortSignal.timeout(9500)
       });
       const data = await res.json();
       let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -619,6 +630,133 @@ async function executePlannedTool(db, action, ctx) {
     return { tool, ok: true, ...ctx.statsObj, livePrices: ctx.livePrices };
   }
 
+  if (tool === 'list_knowledge') {
+    const { items } = await listKnowledge(db).catch(() => ({ items: [] }));
+    return {
+      tool,
+      ok: true,
+      count: items.length,
+      items: items.slice(0, 15).map(i => ({ title: i.title, slug: i.slug, category: i.category || 'general' }))
+    };
+  }
+
+  if (tool === 'get_market_prices') {
+    return { tool, ok: true, livePrices: ctx.livePrices || getLiveInstitutionalFeed() };
+  }
+
+  if (tool === 'send_telegram_dm') {
+    const rawTarget = String(args.target || '').trim();
+    const message = String(args.message || 'تنبيه خاص من إدارة المنظومة 🎯').trim();
+    const tgLinkM = rawTarget.match(/https?:\/\/t\.me\/contact\/([0-9]{5,16})(?::[^\s]+)?/i);
+    let targetCid = tgLinkM ? tgLinkM[1] : (/^\d{5,16}$/.test(rawTarget) ? rawTarget : '');
+    if (!targetCid && rawTarget) {
+      const cleanedTarget = rawTarget.replace(/^https?:\/\/t\.me\//i, '').replace(/^@/, '').trim();
+      const prof = await resolveTargetProfile(db, cleanedTarget).catch(() => null);
+      targetCid = prof?.chatId || prof?.telegram?.chatId || prof?.telegram_chat_id || '';
+      if (!targetCid && ctx.helpers?.findChatIdByTarget) {
+        targetCid = await ctx.helpers.findChatIdByTarget(db, cleanedTarget).catch(() => '') || '';
+      }
+    }
+    if (!targetCid) {
+      return { tool, ok: false, target: rawTarget, broadcast_prevented: true, error: `Could not resolve numeric Telegram chat_id for "${rawTarget}". No broadcast was triggered.` };
+    }
+    const tgTok = ctx.helpers?.TRADING_TOKEN || ctx.helpers?.CEO_TOKEN || ctx.currentToken || process.env.TELEGRAM_TRADER_BOT_TOKEN || process.env.TELEGRAM_CEO_BOT_TOKEN || '';
+    if (!tgTok || !ctx.helpers?.tgCall) {
+      return { tool, ok: false, target: rawTarget, chatId: targetCid, error: 'Telegram bot token or helper unavailable.' };
+    }
+    const tgRes = await ctx.helpers.tgCall(tgTok, 'sendMessage', {
+      chat_id: targetCid,
+      text: escapeHtml(message),
+      parse_mode: 'HTML'
+    }).catch(e => ({ ok: false, description: e.message }));
+    return {
+      tool,
+      ok: Boolean(tgRes && tgRes.ok),
+      single_user_only: true,
+      chatId: targetCid,
+      target: rawTarget || targetCid,
+      message,
+      messageId: tgRes?.result?.message_id,
+      error: tgRes && !tgRes.ok ? (tgRes.description || 'Telegram API rejected delivery') : undefined
+    };
+  }
+
+  if (tool === 'broadcast_telegram') {
+    const message = String(args.message || ctx.userPrompt || '').trim();
+    if (!message) return { tool, ok: false, error: 'Missing broadcast message content.' };
+    const tgTok = ctx.helpers?.TRADING_TOKEN || process.env.TELEGRAM_TRADER_BOT_TOKEN || '';
+    if (!tgTok || !ctx.helpers?.tgCall) {
+      return { tool, ok: false, error: 'Trading Telegram bot token or helper unavailable.' };
+    }
+    const cids = await getAllTraderChatIds(db, ctx.helpers?.CEO_CHAT_ID || process.env.CEO_CHAT_ID || '');
+    let sent = 0, failed = 0;
+    for (const cid of cids) {
+      const r = await ctx.helpers.tgCall(tgTok, 'sendMessage', {
+        chat_id: cid,
+        text: escapeHtml(message),
+        parse_mode: 'HTML'
+      }).catch(() => null);
+      if (r && r.ok) sent++; else failed++;
+      await sleep(50);
+    }
+    return { tool, ok: sent > 0, sent, failed, total: cids.length };
+  }
+
+  if (tool === 'approve_lead') {
+    const cfg = getBrandCfg();
+    const targetRaw = String(args.target || '').trim();
+    const isLatest = !targetRaw || /^(?:latest|last|newest|recent|آخر|اخر|أحدث|احدث)$/i.test(targetRaw);
+    let lead = null;
+    if (isLatest) {
+      const tl = await db.collection('trading_leads').find({}).sort({ createdAt: -1, created_at: -1, _id: -1 }).limit(1).toArray().catch(() => []);
+      lead = tl[0] || null;
+      if (!lead) {
+        const l2 = await db.collection('leads').find({}).sort({ createdAt: -1, created_at: -1, _id: -1 }).limit(1).toArray().catch(() => []);
+        lead = l2[0] || null;
+      }
+      if (!lead) {
+        const ct = await db.collection('contacts').find({}).sort({ createdAt: -1, created_at: -1, _id: -1 }).limit(1).toArray().catch(() => []);
+        lead = ct[0] || null;
+      }
+    } else {
+      const prof = await resolveTargetProfile(db, targetRaw).catch(() => null);
+      if (prof) {
+        lead = {
+          name: prof.name,
+          full_name: prof.name,
+          email: prof.emails?.[0] || (targetRaw.includes('@') ? targetRaw : ''),
+          phone: prof.phones?.[0] || ''
+        };
+      }
+    }
+    if (!lead) return { tool, ok: false, error: `No matching lead found for "${targetRaw || 'latest'}".` };
+    const leadName = lead.full_name || lead.name || lead.fullName || 'Trader';
+    const leadEmail = String(lead.email || '').trim().toLowerCase();
+    const approvedAt = new Date();
+    const updFilter = lead._id ? { _id: lead._id } : (leadEmail ? { email: leadEmail } : { full_name: leadName });
+    await Promise.all([
+      db.collection('trading_leads').updateOne(updFilter, { $set: { status: 'approved', approvedAt } }).catch(() => {}),
+      db.collection('leads').updateOne(leadEmail ? { email: leadEmail } : updFilter, { $set: { status: 'approved', approvedAt } }).catch(() => {}),
+      db.collection('contacts').updateOne(leadEmail ? { email: leadEmail } : updFilter, { $set: { status: 'approved', approvedAt } }).catch(() => {})
+    ]);
+    let emailSent = false;
+    let messageId = '';
+    let emailErr = '';
+    if (leadEmail) {
+      const planNote = args.plan ? ` (${args.plan})` : '';
+      const mailRes = await sendAiExecutiveEmail(
+        db,
+        [leadEmail],
+        `مرحباً ${leadName}! تم اعتماد حسابك وانضمامك بنجاح إلى منظومة ${cfg.brand} VIP${planNote}. روابط الدخول وجدول الجلسات الحية جاهزة لك الآن.`,
+        leadName
+      ).catch(e => ({ ok: false, error: e.message }));
+      emailSent = Boolean(mailRes && mailRes.ok);
+      messageId = mailRes?.messageId || '';
+      emailErr = mailRes?.error || '';
+    }
+    return { tool, ok: true, name: leadName, email: leadEmail, emailSent, messageId, error: emailErr || undefined };
+  }
+
   return { tool, ok: true };
 }
 
@@ -702,6 +840,13 @@ async function executeAgenticPlan({
       .replace(/https?:\/\/t\.me\/\S+/gi, '')
       .replace(/^(?:2ollo|2olo|2olha|قوله|قولها|بلغه|en|inn|that|saying)\s+/i, '')
       .trim();
+    if (!cleanMsg && (tgContactLink || tgUserLink)) {
+      const linkMatch = tgContactLink || tgUserLink;
+      const afterLink = userPrompt.slice(linkMatch.index + linkMatch[0].length)
+        .replace(/^(?:2ollo|2olo|2olha|قوله|قولها|بلغه|en|inn|that|saying|msg|message|:|-|\s)+/i, '')
+        .trim();
+      if (afterLink) cleanMsg = afterLink;
+    }
     if (!cleanMsg) {
       const mText = userPrompt.match(/(?:2ollo|2olo|قوله|بلغه|en|inn|that|saying)\s+(.+)$/i);
       cleanMsg = mText ? mText[1].trim() : 'تنبيه خاص من إدارة المنظومة 🎯';
@@ -817,7 +962,28 @@ async function executeAgenticPlan({
     else normalizedTime = `${rawTime} (بتوقيت القاهرة)`;
 
     await updateCampaignSettings(db, { session_time: normalizedTime }, channel).catch(() => {});
-    const rep = `✅ تمام يا فندم! تم تعديل موعد جلسة التداول المباشرة رسمياً إلى <b>${escapeHtml(normalizedTime)}</b> ومزامنتها على MongoDB Atlas وجميع البوتات فوراً 🎯`;
+    let rep = `✅ تمام يا فندم! تم تعديل موعد جلسة التداول المباشرة رسمياً إلى <b>${escapeHtml(normalizedTime)}</b> ومزامنتها على MongoDB Atlas وجميع البوتات فوراً 🎯`;
+    const sessionActions = [{ tool: 'update_campaign_settings', ok: true, session_time: normalizedTime }];
+    if (/(?:بلغ|بلّغ|نبه|نبّه|اعلن|أعلن|اخطر|أخطر|ابلغ|بلغوا|notify|announce|tell\s+(?:the\s+)?(?:subscribers|members|everyone)|alert)\s*(?:ال)?(?:مشتركين|المشتركين|الكل|الاعضاء|الأعضاء|المتداولين|subscribers|members|everyone|traders|all)?/i.test(userPrompt)
+        && /(?:مشترك|الكل|الاعضاء|الأعضاء|المتداولين|subscribers|members|everyone|traders|all)/i.test(userPrompt)
+        && helpers.tgCall && (helpers.TRADING_TOKEN || process.env.TELEGRAM_TRADER_BOT_TOKEN)) {
+      try {
+        const cids = await getAllTraderChatIds(db, chatId || helpers.CEO_CHAT_ID || process.env.CEO_CHAT_ID);
+        const announce = `📢 <b>تحديث موعد الجلسة المباشرة</b>\nجلسة التداول النهاردة الساعة <b>${escapeHtml(normalizedTime)}</b>.\nنشوفكم على الجلسة! 🚀`;
+        let sent = 0, failed = 0;
+        const tok = helpers.TRADING_TOKEN || process.env.TELEGRAM_TRADER_BOT_TOKEN;
+        for (const cid of cids) {
+          const r = await helpers.tgCall(tok, 'sendMessage', { chat_id: cid, text: announce, parse_mode: 'HTML' }).catch(() => null);
+          if (r && r.ok) sent++; else failed++;
+          await sleep(60);
+        }
+        rep += `\n\n📣 <b>تم إبلاغ المشتركين:</b> ${sent} وصلت${failed ? ` | ${failed} فشلت` : ''}.`;
+        sessionActions.push({ tool: 'broadcast_session_update', ok: sent > 0, sent, failed });
+      } catch (e) {
+        rep += `\n\n⚠️ تم تحديث الموعد لكن فشل إبلاغ المشتركين: ${escapeHtml(e.message || 'error')}`;
+        sessionActions.push({ tool: 'broadcast_session_update', ok: false, error: e.message });
+      }
+    }
     if (!isTestCall && chatId && helpers.tgCall && currentToken) {
       await helpers.tgCall(currentToken, 'sendMessage', { chat_id: chatId, text: rep, parse_mode: 'HTML' }).catch(() => {});
     }
@@ -825,7 +991,7 @@ async function executeAgenticPlan({
       ok: true,
       agentic: true,
       thought: 'Updated session settings in MongoDB Atlas',
-      actionsExecuted: [{ tool: 'update_campaign_settings', ok: true, session_time: normalizedTime }],
+      actionsExecuted: sessionActions,
       reply: rep
     };
   }
@@ -857,16 +1023,31 @@ async function executeAgenticPlan({
   // Deterministic Tool Fallback when LLM keys are unconfigured or unreachable
   if (!plan) {
     const low = String(userPrompt || '').toLowerCase();
-    if (/^(?:search|find|lookup|list|show|ابحث|دور|هات|اعرض)\b/i.test(low) || /\b(?:search\s+(?:system|crm|knowledge|leads)|list\s+leads)\b/i.test(low)) {
+    if (/^(?:approve|accept|اعتمد|اقبل|موافقة)(?=\s|$|[:.,!؟?])/i.test(low)) {
+      const target = userPrompt.replace(/^(?:approve|accept|اعتمد|اقبل|موافقة)\s*(?:lead|trader|client|member|العميل|عميل|المتداول|متداول)?\s*/i, '').trim() || 'latest';
+      plan = { thought: 'Deterministic approve lead', actions: [{ tool: 'approve_lead', args: { target } }], reply_html: '' };
+    } else if (/^(?:add|save|اضف|أضف|احفظ)\s+(?:a\s+|new\s+)?(?:kb|knowledge|rule|doc|معلومة|قاعدة)(?=\s|$|[:.,!؟?])/i.test(low)) {
+      const rawRule = userPrompt.replace(/^(?:add|save|اضف|أضف|احفظ)\s+(?:a\s+|new\s+)?(?:kb|knowledge|rule|doc|معلومة|قاعدة)(?:\s*(?:جديدة|جديد))?\s*:?\s*/i, '').trim();
+      const parts = rawRule.split('|');
+      const title = parts.length > 1 ? parts[0].trim() : rawRule.slice(0, 60);
+      const content = parts.length > 1 ? parts.slice(1).join('|').trim() : rawRule;
+      plan = { thought: 'Deterministic KB add', actions: [{ tool: 'add_knowledge', args: { title, content, category: 'general' } }], reply_html: '' };
+    } else if (/(?:list\s+(?:all\s+)?(?:kb|knowledge|articles|rules)|show\s+(?:kb|knowledge)|قائمة\s+المعرفة|اعرض\s+(?:المعرفة|القواعد))/i.test(low)) {
+      plan = { thought: 'Deterministic list knowledge base', actions: [{ tool: 'list_knowledge', args: {} }], reply_html: '' };
+    } else if (/(?:\b(?:kpis?|stats|statistics|metrics|overview)\b|احصائيات|إحصائيات|حالة\s+السيستم)/i.test(low)) {
+      plan = { thought: 'Deterministic live KPIs', actions: [{ tool: 'get_system_kpis', args: {} }], reply_html: '' };
+    } else if (/(?:price|prices|xau|gold|btc|bitcoin|eurusd|سعر|اسعار|أسعار|الدهب|الذهب|البيتكوين)/i.test(low)) {
+      plan = { thought: 'Deterministic live market prices', actions: [{ tool: 'get_market_prices', args: {} }], reply_html: '' };
+    } else if (/^(?:search|find|lookup|list|show|ابحث|دور|هات|اعرض)(?=\s|$|[:.,!؟?])/i.test(low) || /\b(?:search\s+(?:system|crm|knowledge|leads)|list\s+leads)\b/i.test(low)) {
       const qClean = userPrompt.replace(/^(?:search|find|lookup|list|show|ابحث|دور|هات|اعرض)\s*(?:for|in|system|crm|knowledge|leads|عن|في)?\s*/i, '').trim() || userPrompt;
       plan = { thought: 'Deterministic system search', actions: [{ tool: 'search_system', args: { query: qClean, scope: 'all' } }], reply_html: '' };
-    } else if (/^(?:delete|remove|امسح|احذف)\s+(?:kb|knowledge|rule|doc|معلومة|قاعدة)\b/i.test(low)) {
+    } else if (/^(?:delete|remove|امسح|احذف)\s+(?:kb|knowledge|rule|doc|معلومة|قاعدة)(?=\s|$|[:.,!؟?])/i.test(low)) {
       const target = userPrompt.replace(/^(?:delete|remove|امسح|احذف)\s+(?:kb|knowledge|rule|doc|معلومة|قاعدة)\s*/i, '').trim();
       plan = { thought: 'Deterministic KB delete', actions: [{ tool: 'delete_knowledge', args: { slug_or_query: target } }], reply_html: '' };
-    } else if (/^(?:delete|remove|امسح|احذف)\s+(?:lead|contact|user|عميل|متداول)\b/i.test(low)) {
+    } else if (/^(?:delete|remove|امسح|احذف)\s+(?:lead|contact|user|عميل|متداول)(?=\s|$|[:.,!؟?])/i.test(low)) {
       const target = userPrompt.replace(/^(?:delete|remove|امسح|احذف)\s+(?:lead|contact|user|عميل|متداول)\s*/i, '').trim();
       plan = { thought: 'Deterministic CRM delete', actions: [{ tool: 'delete_crm_contact', args: { target } }], reply_html: '' };
-    } else if (/^(?:add|create|اضف|أضف|سجل)\s+(?:lead|contact|عميل|متداول)\b/i.test(low)) {
+    } else if (/^(?:add|create|اضف|أضف|سجل)\s+(?:lead|contact|عميل|متداول)(?=\s|$|[:.,!؟?])/i.test(low)) {
       const emailM = userPrompt.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       const phoneM = userPrompt.match(/\+?[0-9][0-9\s-]{7,15}/);
       plan = { thought: 'Deterministic CRM add', actions: [{ tool: 'add_crm_lead', args: { name: userPrompt.split(/[,|]/)[0].replace(/^(?:add|create|اضف|أضف|سجل)\s+(?:lead|contact|عميل|متداول)\s*/i, '').trim() || 'New Lead', email: emailM?.[0] || '', phone: phoneM?.[0]?.replace(/[\s-]/g, '') || '' } }], reply_html: '' };
@@ -909,6 +1090,26 @@ async function executeAgenticPlan({
       toolSummaries.push(`🗑️ <b>Removed CRM Record:</b> ${escapeHtml(res.target)} (${res.deleted_records} deleted)`);
     } else if (res.tool === 'get_system_kpis') {
       toolSummaries.push(`📊 <b>Live KPIs:</b> Contacts=${res.nContacts}, Leads=${res.nLeadsV2}, TradingLeads=${res.nTradingLeads}, Emails=${res.nOutboundEmails}`);
+    } else if (res.tool === 'list_knowledge') {
+      const listTxt = (res.items || []).length
+        ? res.items.map(i => `• <b>${escapeHtml(i.title)}</b> [<code>${escapeHtml(i.slug)}</code>]`).join('\n')
+        : 'لا توجد مقالات محفوظة بعد.';
+      toolSummaries.push(`📚 <b>Knowledge Base (${res.count || 0} entries):</b>\n${listTxt}`);
+    } else if (res.tool === 'get_market_prices') {
+      toolSummaries.push(`📈 <b>Live Market Prices:</b>\n${escapeHtml(res.livePrices || livePrices)}`);
+    } else if (res.tool === 'update_campaign_settings') {
+      const u = res.updated || {};
+      toolSummaries.push(`🎯 <b>Campaign Updated:</b> Session=<b>${escapeHtml(u.session_time || u.startAt || 'Updated')}</b>` + (u.zoom_url || u.zoomUrl ? ` | Zoom=<code>${escapeHtml(u.zoom_url || u.zoomUrl)}</code>` : ''));
+    } else if (res.tool === 'send_email') {
+      toolSummaries.push(`✉️ <b>Email Delivered:</b> To <code>${escapeHtml(res.to || 'recipient')}</code>` + (res.messageId ? ` (ID: <code>${escapeHtml(res.messageId)}</code>)` : ''));
+    } else if (res.tool === 'send_discord_dm') {
+      toolSummaries.push(`💬 <b>Discord DM Delivered:</b> User <code>${escapeHtml(res.userId || '')}</code>` + (res.messageId ? ` (Msg: <code>${escapeHtml(res.messageId)}</code>)` : ''));
+    } else if (res.tool === 'send_telegram_dm') {
+      toolSummaries.push(`📲 <b>Telegram Direct Message Delivered (Single User Only):</b> Chat ID <code>${escapeHtml(res.chatId || '')}</code>` + (res.messageId ? ` (Msg: <code>${escapeHtml(String(res.messageId))}</code>)` : ''));
+    } else if (res.tool === 'broadcast_telegram') {
+      toolSummaries.push(`📣 <b>Telegram Broadcast Delivered:</b> ${res.sent || 0}/${res.total || 0} subscribers received the announcement${res.failed ? ` (${res.failed} unreachable/blocked)` : ''}.`);
+    } else if (res.tool === 'approve_lead') {
+      toolSummaries.push(`✅ <b>Lead Approved:</b> ${escapeHtml(res.name || 'Trader')}` + (res.emailSent ? ` | Welcome Email Sent to <code>${escapeHtml(res.email)}</code>` : (res.email ? ` | Email pending (${escapeHtml(res.error || 'SMTP notice')})` : '')));
     }
   }
 

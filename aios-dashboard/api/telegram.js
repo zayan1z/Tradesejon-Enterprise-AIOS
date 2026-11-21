@@ -49,39 +49,9 @@ const emailTransporter = nodemailer ? nodemailer.createTransport({
   }
 }) : { sendMail: async () => { throw new Error('nodemailer not installed'); } };
 
-// Memory cache for MongoDB client
-function createMockDb() {
-  const memStore = new Map();
-  const getCol = (name) => {
-    if (!memStore.has(name)) memStore.set(name, []);
-    const items = memStore.get(name);
-    return {
-      insertOne: async (doc) => { items.push({ _id: String(Date.now()), ...doc }); return { insertedId: doc._id }; },
-      insertMany: async (docs) => { (docs || []).forEach(d => items.push(d)); return { insertedCount: (docs || []).length }; },
-      updateOne: async () => ({ acknowledged: true, modifiedCount: 1 }),
-      updateMany: async () => ({ acknowledged: true, modifiedCount: 1 }),
-      deleteOne: async (filter) => {
-        const idx = items.findIndex(x => !filter || Object.keys(filter).length === 0 || JSON.stringify(x).toLowerCase().includes(String(Object.values(filter)[0] || '').toLowerCase()));
-        if (idx >= 0) { items.splice(idx, 1); return { acknowledged: true, deletedCount: 1 }; }
-        return { acknowledged: true, deletedCount: 1 };
-      },
-      deleteMany: async () => { const n = items.length; items.length = 0; return { acknowledged: true, deletedCount: n }; },
-      findOneAndUpdate: async (filter, update) => ({ value: update.$set || {} }),
-      findOne: async (filter) => items[0] || null,
-      find: () => ({
-        sort: () => ({ limit: () => ({ toArray: async () => items.slice(0, 15), next: async () => items[0] || null }) }),
-        limit: () => ({ toArray: async () => items.slice(0, 15), next: async () => items[0] || null }),
-        toArray: async () => items.slice(0, 15),
-        next: async () => items[0] || null
-      }),
-      countDocuments: async () => items.length
-    };
-  };
-  return {
-    collection: (name) => getCol(name)
-  };
-}
-const mockDbInstance = createMockDb();
+// Shared snapshot-seeded query-capable fallback DB when Atlas is unreachable
+const { getSharedMockDb } = require('./_mock_db');
+const mockDbInstance = getSharedMockDb();
 
 let cachedClient = null;
 async function getDb() {

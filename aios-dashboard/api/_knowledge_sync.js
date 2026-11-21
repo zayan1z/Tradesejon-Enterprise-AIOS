@@ -25,30 +25,62 @@ function resolveKbDir() {
   return fallback;
 }
 
+function getWritableKbDir() {
+  const candidates = [
+    process.env.KB_DIR,
+    process.env.TRADESEJON_KNOWLEDGE_BASE_DIR,
+    path.join(process.cwd(), 'rag-knowledge-base'),
+    path.join(__dirname, '..', '..', 'rag-knowledge-base'),
+    '/app/rag-knowledge-base',
+    '/tmp/tradesejon_rag_kb'
+  ].filter(Boolean);
+  for (const dir of candidates) {
+    try {
+      fs.mkdirSync(path.join(dir, 'uploads'), { recursive: true });
+      const testFile = path.join(dir, '.wtest');
+      fs.writeFileSync(testFile, '1');
+      fs.unlinkSync(testFile);
+      return dir;
+    } catch {}
+  }
+  return '/tmp/tradesejon_rag_kb';
+}
+
 function getCustomKbFile(kbDir) {
   return path.join(kbDir, 'custom_knowledge.json');
 }
 
 function readDiskStore() {
   const kbDir = resolveKbDir();
-  const customFile = getCustomKbFile(kbDir);
-  if (!fs.existsSync(customFile)) return { kbDir, entries: [] };
-  try {
-    const parsed = JSON.parse(fs.readFileSync(customFile, 'utf8'));
-    const entries = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.entries) ? parsed.entries : []);
-    return { kbDir, entries };
-  } catch {
-    return { kbDir, entries: [] };
+  const writableDir = getWritableKbDir();
+  const dirs = Array.from(new Set([writableDir, kbDir]));
+  const bySlug = new Map();
+  for (const d of dirs) {
+    const customFile = getCustomKbFile(d);
+    if (!fs.existsSync(customFile)) continue;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(customFile, 'utf8'));
+      const list = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.entries) ? parsed.entries : []);
+      for (const item of list) {
+        if (item && (item.slug || item.id) && !bySlug.has(item.slug || item.id)) {
+          bySlug.set(item.slug || item.id, item);
+        }
+      }
+    } catch {}
   }
+  return { kbDir: writableDir || kbDir, entries: Array.from(bySlug.values()) };
 }
 
 function writeDiskStore(kbDir, entries) {
-  fs.mkdirSync(kbDir, { recursive: true });
-  fs.writeFileSync(
-    getCustomKbFile(kbDir),
-    JSON.stringify({ updated_at: new Date().toISOString(), count: entries.length, entries }, null, 2),
-    'utf8'
-  );
+  const targetDir = getWritableKbDir();
+  try {
+    fs.mkdirSync(targetDir, { recursive: true });
+    fs.writeFileSync(
+      getCustomKbFile(targetDir),
+      JSON.stringify({ updated_at: new Date().toISOString(), count: entries.length, entries }, null, 2),
+      'utf8'
+    );
+  } catch {}
 }
 
 // Lightweight zero-dependency ZIP central/local reader for DOCX and XLSX XML text extraction

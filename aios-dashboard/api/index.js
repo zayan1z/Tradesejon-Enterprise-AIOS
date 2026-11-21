@@ -113,73 +113,34 @@ async function broadcastMediaFromWeb(db, { mediaB64, fname, mime, caption, isTes
   return { kind, sentCount, reply };
 }
 
+const { getSharedMockDb } = require('./_mock_db');
+
 let cachedAtlasClient = null;
-const _memCollections = new Map();
 function getInMemoryMockDb() {
-  const col = (name) => {
-    if (!_memCollections.has(name)) _memCollections.set(name, []);
-    const arr = _memCollections.get(name);
-    const makeCursor = (subset) => ({
-      sort: () => makeCursor(subset),
-      skip: (n) => makeCursor(subset.slice(n)),
-      limit: (n) => makeCursor(subset.slice(0, n)),
-      project: () => makeCursor(subset),
-      toArray: async () => subset,
-      next: async () => subset[0] || null
-    });
-    return {
-      insertOne: async (doc) => { const d = { _id: String(Date.now()) + Math.random().toString(16).slice(2, 6), ...doc }; arr.unshift(d); return { insertedId: d._id }; },
-      insertMany: async (docs) => { for (const d of (docs || [])) arr.unshift({ _id: String(Date.now()) + Math.random().toString(16).slice(2, 6), ...d }); return { insertedCount: (docs || []).length }; },
-      updateOne: async (filter, update, opts = {}) => {
-        const idx = arr.findIndex(x => Object.entries(filter || {}).every(([k, v]) => x[k] === v));
-        if (idx >= 0) { arr[idx] = { ...arr[idx], ...(update?.$set || {}) }; return { acknowledged: true, matchedCount: 1, modifiedCount: 1 }; }
-        if (opts.upsert) { arr.unshift({ _id: String(Date.now()), ...(filter || {}), ...(update?.$set || {}) }); return { acknowledged: true, matchedCount: 0, modifiedCount: 1 }; }
-        return { acknowledged: true, matchedCount: 0, modifiedCount: 0 };
-      },
-      updateMany: async () => ({ acknowledged: true, matchedCount: 0, modifiedCount: 0 }),
-      findOneAndUpdate: async (filter, update, opts = {}) => {
-        const doc = { _id: String(Date.now()), ...(filter || {}), ...(update?.$set || {}) };
-        arr.unshift(doc);
-        return { value: doc };
-      },
-      deleteOne: async (filter) => {
-        const idx = arr.findIndex(x => Object.entries(filter || {}).every(([k, v]) => x[k] === v));
-        if (idx >= 0) { arr.splice(idx, 1); return { deletedCount: 1 }; }
-        return { deletedCount: 0 };
-      },
-      deleteMany: async (filter) => {
-        const before = arr.length;
-        for (let i = arr.length - 1; i >= 0; i--) {
-          if (Object.entries(filter || {}).every(([k, v]) => arr[i][k] === v)) arr.splice(i, 1);
-        }
-        return { deletedCount: before - arr.length };
-      },
-      findOne: async (filter = {}) => arr.find(x => Object.entries(filter || {}).every(([k, v]) => v === undefined || x[k] === v)) || null,
-      find: (filter = {}) => makeCursor(arr.filter(x => Object.entries(filter || {}).every(([k, v]) => (typeof v === 'object' ? true : x[k] === v)))),
-      countDocuments: async () => arr.length
-    };
-  };
-  return {
-    collection: col,
-    listCollections: () => ({ toArray: async () => Array.from(_memCollections.keys()).map(name => ({ name })) })
-  };
+  return getSharedMockDb();
 }
 
 async function getAtlasDb() {
-  if (!MONGO_ATLAS_URI || !MongoClient) {
-    return getInMemoryMockDb();
+  try {
+    if (!MONGO_ATLAS_URI || !MongoClient) {
+      return getSharedMockDb();
+    }
+    if (!cachedAtlasClient) {
+      const useTls = /^mongodb\+srv:\/\//i.test(MONGO_ATLAS_URI) || /[?&](?:tls|ssl)=true/i.test(MONGO_ATLAS_URI);
+      cachedAtlasClient = new MongoClient(MONGO_ATLAS_URI, {
+        serverSelectionTimeoutMS: 3500,
+        connectTimeoutMS: 5000,
+        ...(useTls ? { tls: true } : {}),
+        maxPoolSize: 10,
+      });
+      await cachedAtlasClient.connect();
+    }
+    return cachedAtlasClient.db(MONGO_DB_NAME);
+  } catch (err) {
+    cachedAtlasClient = null;
+    console.warn('getAtlasDb fallback to shared mock DB:', err.message);
+    return getSharedMockDb();
   }
-  if (!cachedAtlasClient) {
-    const useTls = /^mongodb\+srv:\/\//i.test(MONGO_ATLAS_URI) || /[?&](?:tls|ssl)=true/i.test(MONGO_ATLAS_URI);
-    cachedAtlasClient = new MongoClient(MONGO_ATLAS_URI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
-      ...(useTls ? { tls: true } : {}),
-      maxPoolSize: 10,
-    });
-    await cachedAtlasClient.connect();
-  }
-  return cachedAtlasClient.db(MONGO_DB_NAME);
 }
 
 const TUNNEL_URL = String(process.env.AIOS_TUNNEL_URL || "").trim().replace(/\/+$/, "");
@@ -1557,7 +1518,13 @@ module.exports = async (req, res) => {
         history: Array.isArray(body.history) ? body.history : [],
         helpers: tg
       });
-      const plain = String(result.reply || '').replace(/<[^>]+>/g, '');
+      const plain = String(result.reply || '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
       let aud = '';
       if (body.want_audio || body.audio_base64 || body.is_voice) {
         aud = await fetchGoogleMasriTtsBase64(plain.slice(0, 400), isEng);
