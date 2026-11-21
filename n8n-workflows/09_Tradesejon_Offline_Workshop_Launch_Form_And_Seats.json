@@ -17,7 +17,8 @@
         "path": "vps-offline-workshop",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "webhookId": "2e1a07c9-4dbc-533e-ab73-afa139942f33"
     },
     {
       "id": "auth-05",

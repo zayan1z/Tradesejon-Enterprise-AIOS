@@ -1834,6 +1834,7 @@ function toEnglishDigits(val) {
     .replace(/[\u0660-\u0669]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0660 + 48))
     .replace(/[\u06F0-\u06F9]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x06F0 + 48));
 }
+var currentAppLang = (typeof localStorage !== 'undefined' && localStorage.getItem('tradesejon_lang')) || 'ar';
 let currentLeads = [];
 let currentTickets = [];
 let selectedLeadId = null;
@@ -3026,10 +3027,10 @@ async function sendChat(overrideText) {
   if (!q) return;
   inp.value = '';
   appendMsg(q, 'user');
-  showAiosTypingIndicator(true, 'Thinking….');
   chatHistory.push({ role: 'user', content: q });
 
   try {
+    showAiosTypingIndicator(true, 'Thinking….');
     const res = await fetch('/api/aios-chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -3304,7 +3305,7 @@ const I18N_DICT = {
   }
 };
 
-let currentAppLang = localStorage.getItem('tradesejon_lang') || 'ar';
+var currentAppLang = (typeof localStorage !== 'undefined' && localStorage.getItem('tradesejon_lang')) || 'ar';
 
 function setAppLanguage(lang) {
   currentAppLang = lang;

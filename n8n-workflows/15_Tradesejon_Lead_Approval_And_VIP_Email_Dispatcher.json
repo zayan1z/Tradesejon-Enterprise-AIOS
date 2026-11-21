@@ -17,7 +17,8 @@
         "path": "vps-vip-email",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "webhookId": "433e7d04-452b-5c59-8a46-71b4761f95e5"
     },
     {
       "id": "auth-11",

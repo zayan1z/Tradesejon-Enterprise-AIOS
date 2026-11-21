@@ -17,7 +17,8 @@
         "path": "vps-trader-agent",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "webhookId": "05773c22-d76b-58f1-affa-167be6d6c30c"
     },
     {
       "id": "auth-03",

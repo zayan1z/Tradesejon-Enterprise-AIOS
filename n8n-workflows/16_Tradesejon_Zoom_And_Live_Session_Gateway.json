@@ -17,7 +17,8 @@
         "path": "vps-zoom-gateway",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "webhookId": "8ee53ac8-1e2b-54f7-8e1b-493086fca70c"
     },
     {
       "id": "auth-13",

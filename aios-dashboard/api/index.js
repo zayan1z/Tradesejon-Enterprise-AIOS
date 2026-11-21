@@ -1504,20 +1504,103 @@ module.exports = async (req, res) => {
       }
     }
     // n8n-First Autonomous Agentic Dispatch (with automatic seamless local self-healing fallback)
+    const tg = require('./telegram.js').shared;
+    const { executeAgenticPlan, updateCampaignSettings, planAgenticActions } = require('./_agentic_brain');
+    const adb = await tg.getDb();
     const n8nUrl = String(process.env.N8N_BASE_URL || process.env.N8N_WEBHOOK_BASE_URL || '').trim();
     const n8nValidForEnv = Boolean(n8nUrl && (!process.env.VERCEL || !/127\.0\.0\.1|localhost/i.test(n8nUrl)));
     if (n8nValidForEnv) {
       try {
+        const [nContacts, nLeadsV2, nTradingLeads, nOutboundEmails, kbData, subCids] = await Promise.all([
+          adb.collection('contacts').countDocuments().catch(() => 0),
+          adb.collection('leads').countDocuments().catch(() => 0),
+          adb.collection('trading_leads').countDocuments().catch(() => 0),
+          adb.collection('outbound_emails').countDocuments().catch(() => 0),
+          listKnowledge(adb).catch(() => ({ items: [] })),
+          getAllTraderChatIds(adb, tg.CEO_CHAT_ID).catch(() => [])
+        ]);
+        const livePricesObj = computeLivePrices();
+        const livePricesStr = `Gold (XAU/USD): $${livePricesObj.XAUUSD?.price || '3940.50'} | Bitcoin (BTC/USDT): $${livePricesObj.BTCUSDT?.price || '78250.00'}`;
+        const ctxSummary = `Live Prices: ${livePricesStr}\nCRM Stats: contacts=${nContacts}, leads=${nLeadsV2}, trading_leads=${nTradingLeads}, emails=${nOutboundEmails}`;
+        const preplanned = await planAgenticActions(q, ctxSummary, Array.isArray(body.history) ? body.history : []).catch(() => null);
+        const runtimeCtx = {
+          brand: process.env.BRAND_NAME || 'Tradesejon',
+          groqKey: process.env.GROQ_API_KEY || GROQ_KEY || '',
+          geminiKey: process.env.GEMINI_API_KEY || '',
+          tgCeoToken: tg.CEO_TOKEN || '',
+          tgTraderToken: tg.TRADING_TOKEN || '',
+          subscriberChatIds: subCids,
+          livePrices: livePricesStr,
+          preplanned,
+          stats: { nContacts, nLeadsV2, nTradingLeads, nOutboundEmails },
+          kbItems: (kbData.items || []).slice(0, 20).map(i => ({ title: i.title, slug: i.slug, content: String(i.content || '').slice(0, 800) }))
+        };
         const n8nRes = await callN8nWithFallback('tradesejon-aios-chat', {
           query: q,
           message: q,
           history: Array.isArray(body.history) ? body.history.slice(-8) : [],
           channel: reqChannel,
           actor: body.actor || reqChannel,
-          want_audio: Boolean(body.want_audio || body.audio_base64 || body.is_voice)
-        }, { baseUrl: n8nUrl, timeoutMs: 14000 });
+          want_audio: Boolean(body.want_audio || body.audio_base64 || body.is_voice),
+          runtime_ctx: runtimeCtx
+        }, { baseUrl: n8nUrl, timeoutMs: 18000 });
         if (n8nRes.ok && n8nRes.data && n8nRes.data.reply) {
-          const nPlain = String(n8nRes.data.reply || '')
+          const nActs = Array.isArray(n8nRes.data.actions) ? n8nRes.data.actions : (Array.isArray(n8nRes.data.actionsExecuted) ? n8nRes.data.actionsExecuted : []);
+          let replyRaw = String(n8nRes.data.reply || '');
+          for (const act of nActs) {
+            if (!act) continue;
+            if (!act.ok && (String(act.error || '').includes('delegated') || String(act.error || '').includes('disallowed'))) {
+              if (act.tool === 'send_telegram_dm' && act.chatId && tg.tgCall && tg.TRADING_TOKEN) {
+                const dmR = await tg.tgCall(tg.TRADING_TOKEN, 'sendMessage', {
+                  chat_id: act.chatId,
+                  text: String(act.message || 'Executive notification'),
+                  parse_mode: 'HTML'
+                }).catch(e => ({ ok: false, description: e.message }));
+                act.ok = Boolean(dmR && dmR.ok);
+                act.messageId = dmR?.result?.message_id;
+                act.error = act.ok ? undefined : (dmR?.description || 'Telegram API rejected');
+                if (act.ok) {
+                  replyRaw = `✅ Verified Delivered to Single Telegram User Only (No Broadcast)!\n🆔 Chat ID: ${act.chatId}\n📝 Message: "${act.message}"\n📌 Message ID: ${act.messageId || ''}`;
+                }
+              } else if (act.tool === 'broadcast_telegram' && tg.tgCall && tg.TRADING_TOKEN) {
+                let sent = 0, failed = 0;
+                const bMsg = String(act.message || q).trim();
+                for (const cid of subCids) {
+                  const br = await tg.tgCall(tg.TRADING_TOKEN, 'sendMessage', {
+                    chat_id: cid,
+                    text: bMsg,
+                    parse_mode: 'HTML'
+                  }).catch(() => null);
+                  if (br && br.ok) sent++; else failed++;
+                  await sleep(45);
+                }
+                act.ok = sent > 0;
+                act.sent = sent;
+                act.failed = failed;
+                act.error = undefined;
+                replyRaw = replyRaw.replace(/📣[^\n]*/, `📣 تم إبلاغ المشتركين: ${sent} وصلت${failed ? ` | ${failed} فشلت` : ''}.`);
+              }
+            }
+            if (!act.ok) continue;
+            if (act.tool === 'add_knowledge' && act.title && act.content) {
+              await ingestKnowledge(adb, { title: act.title, content: act.content, category: act.category || 'general' }).catch(() => {});
+            } else if (act.tool === 'delete_knowledge' && act.deleted_slug) {
+              await deleteKnowledge(adb, act.deleted_slug).catch(() => {});
+            } else if (act.tool === 'add_crm_lead' && (act.email || act.phone)) {
+              const lf = act.email ? { email: act.email } : { phone: act.phone };
+              await adb.collection('trading_leads').updateOne(lf, { $set: { full_name: act.name, email: act.email, phone: act.phone, status: act.status || 'prospect', updatedAt: new Date() } }, { upsert: true }).catch(() => {});
+            } else if (act.tool === 'delete_crm_contact' && act.delegated_sync && act.target) {
+              const esc = String(act.target).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const rx = new RegExp(`^${esc}$`, 'i');
+              await Promise.all([
+                adb.collection('trading_leads').deleteOne({ $or: [{ email: act.target.toLowerCase() }, { phone: act.target }, { full_name: rx }, { name: rx }] }).catch(() => {}),
+                adb.collection('contacts').deleteOne({ $or: [{ email: act.target.toLowerCase() }, { phone: act.target }, { full_name: rx }, { name: rx }] }).catch(() => {})
+              ]);
+            } else if (act.tool === 'update_campaign_settings' && act.session_time) {
+              await updateCampaignSettings(adb, { session_time: act.session_time }, reqChannel).catch(() => {});
+            }
+          }
+          const nPlain = replyRaw
             .replace(/<[^>]+>/g, '')
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -1534,7 +1617,7 @@ module.exports = async (req, res) => {
             agentic: true,
             engine: 'n8n:' + n8nRes.via,
             thought: n8nRes.data.thought || 'Executed via n8n Agentic AI',
-            actions: n8nRes.data.actions || n8nRes.data.actionsExecuted || [],
+            actions: nActs,
             reply: toEnglishDigits(nPlain),
             audio_base64: nAud || undefined,
             audio_mime: nAud ? 'audio/mp3' : undefined
@@ -1547,9 +1630,6 @@ module.exports = async (req, res) => {
 
     // Universal agentic brain (same as CEO bot): mail, telegram, broadcast, CRM, memory
     try {
-      const tg = require('./telegram.js').shared;
-      const { executeAgenticPlan } = require('./_agentic_brain');
-      const adb = await tg.getDb();
       const result = await executeAgenticPlan({
         db: adb,
         userPrompt: q,

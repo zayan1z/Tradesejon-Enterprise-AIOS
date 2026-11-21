@@ -17,7 +17,8 @@
         "path": "vps-ceo-command",
         "responseMode": "responseNode",
         "options": {}
-      }
+      },
+      "webhookId": "31f37fbe-b28a-563f-a948-8dd69fa75a40"
     },
     {
       "id": "auth-04",
